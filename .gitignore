@@ -1,0 +1,40 @@
+# Entorno virtual
+venv/
+.venv/
+env/
+
+# Base de datos SQLite local
+*.db
+*.sqlite3
+
+# Variables de entorno (contienen claves secretas)
+.env
+
+# Archivos compilados de Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Migraciones generadas
+migrations/
+
+# Archivos de IDE
+.idea/
+.vscode/
+*.iml
+
+# Archivos del sistema operativo
+.DS_Store
+Thumbs.db
+
+# Cobertura de tests
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Distribución / empaquetado
+dist/
+build/
+*.egg-info/
+

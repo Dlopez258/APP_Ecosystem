@@ -1,0 +1,2 @@
+OK - Tablas creadas correctamente en SQLite
+Tablas creadas: ['alembic_version', 'bloques_blockchain', 'dispositivos', 'entregas', 'puntos_recoleccion', 'recompensas', 'usuarios']

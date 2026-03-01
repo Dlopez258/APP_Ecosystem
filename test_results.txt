@@ -1,0 +1,17 @@
+﻿============================= test session starts =============================
+collecting ... collected 12 items
+
+tests/test_blockchain.py::TestBloque::test_calcular_hash_es_reproducible PASSED [  8%]
+tests/test_blockchain.py::TestBloque::test_hash_cambia_si_datos_cambian PASSED [ 16%]
+tests/test_blockchain.py::TestBloque::test_hash_es_sha256 PASSED         [ 25%]
+tests/test_blockchain.py::TestBloque::test_to_dict PASSED                [ 33%]
+tests/test_blockchain.py::TestCadenaBloques::test_singleton PASSED       [ 41%]
+tests/test_blockchain.py::TestCadenaBloques::test_bloque_genesis PASSED  [ 50%]
+tests/test_blockchain.py::TestCadenaBloques::test_agregar_bloque PASSED  [ 58%]
+tests/test_blockchain.py::TestCadenaBloques::test_encadenamiento_correcto PASSED [ 66%]
+tests/test_blockchain.py::TestCadenaBloques::test_cadena_valida PASSED   [ 75%]
+tests/test_blockchain.py::TestCadenaBloques::test_cadena_invalida_si_alterada PASSED [ 83%]
+tests/test_blockchain.py::TestCadenaBloques::test_obtener_bloque_por_hash PASSED [ 91%]
+tests/test_blockchain.py::TestCadenaBloques::test_obtener_todos_como_dict PASSED [100%]
+
+============================= 12 passed in 1.05s ==============================

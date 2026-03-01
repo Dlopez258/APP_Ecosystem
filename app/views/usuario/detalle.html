@@ -1,0 +1,55 @@
+{% extends "layout/base.html" %}
+{% block titulo %}Perfil de {{ usuario.nombre }}{% endblock %}
+
+{% block contenido %}
+<div class="row">
+    <div class="col-md-4">
+        <div class="card text-center p-4">
+            <i class="bi bi-person-circle text-success" style="font-size: 5rem;"></i>
+            <h3 class="mt-3">{{ usuario.nombre }}</h3>
+            <span class="badge
+                {% if usuario.tipo_usuario == 'gobierno' %}bg-primary
+                {% elif usuario.tipo_usuario == 'empresa' %}bg-info text-dark
+                {% else %}bg-success{% endif %} fs-6 mb-2">
+                {{ usuario.tipo_usuario | capitalize }}
+            </span>
+            <p class="text-muted"><i class="bi bi-geo-alt me-1"></i>{{ usuario.ciudad or 'Sin ciudad' }}</p>
+            <div class="alert alert-warning">
+                <strong>{{ usuario.puntos_acumulados }}</strong> puntos acumulados
+                <i class="bi bi-star-fill ms-1"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Información de la cuenta</h5>
+                <table class="table">
+                    <tr><th>Email:</th><td>{{ usuario.email }}</td></tr>
+                    <tr><th>Miembro desde:</th><td>{{ usuario.fecha_registro.strftime('%d de %B de %Y') }}</td></tr>
+                    <tr><th>Estado:</th>
+                        <td>
+                            <span class="badge {% if usuario.activo %}bg-success{% else %}bg-danger{% endif %}">
+                                {% if usuario.activo %}Activo{% else %}Inactivo{% endif %}
+                            </span>
+                        </td>
+                    </tr>
+                </table>
+
+                <div class="d-flex gap-2 mt-3">
+                    {% if current_user.tipo_usuario == 'gobierno' %}
+                    <a href="{{ url_for('usuario.editar', usuario_id=usuario.id) }}"
+                       class="btn btn-outline-primary">
+                        <i class="bi bi-pencil me-1"></i>Editar
+                    </a>
+                    {% endif %}
+                    <a href="{{ url_for('usuario.listar') }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-1"></i>Volver
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

@@ -1,0 +1,83 @@
+{% extends "layout/base.html" %}
+{% block titulo %}Entrega #{{ entrega.id }}{% endblock %}
+
+{% block contenido %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-box-arrow-in-down me-2"></i>Entrega #{{ entrega.id }}</h5>
+                <span class="badge bg-light text-dark fs-6">{{ entrega.estado }}</span>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-muted mb-3">Información de la entrega</h6>
+                        <table class="table table-sm">
+                            <tr><th>Usuario:</th><td>{{ entrega.usuario.nombre }}</td></tr>
+                            <tr><th>Dispositivo:</th><td>
+                                <a href="{{ url_for('dispositivo.detalle', dispositivo_id=entrega.dispositivo_id) }}">
+                                    {{ entrega.dispositivo.nombre }}
+                                </a>
+                                <span class="badge bg-secondary ms-1">{{ entrega.dispositivo.categoria }}</span>
+                            </td></tr>
+                            <tr><th>Punto de recolección:</th><td>
+                                <a href="{{ url_for('punto_recoleccion.detalle', punto_id=entrega.punto_recoleccion_id) }}">
+                                    {{ entrega.punto_recoleccion.nombre }}
+                                </a>
+                            </td></tr>
+                            <tr><th>Fecha:</th><td>{{ entrega.fecha_entrega.strftime('%d/%m/%Y %H:%M') }}</td></tr>
+                            <tr><th>Puntos otorgados:</th><td>
+                                <span class="badge bg-warning text-dark fs-6">+{{ entrega.puntos_otorgados }}</span>
+                            </td></tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-muted mb-3">Trazabilidad Blockchain</h6>
+                        {% if entrega.hash_blockchain %}
+                        <div class="alert alert-success py-2">
+                            <small class="d-block mb-1 fw-semibold">
+                                <i class="bi bi-link-45deg me-1"></i>Hash del bloque:
+                            </small>
+                            <code class="hash-code">{{ entrega.hash_blockchain }}</code>
+                            <div class="mt-2">
+                                <a href="{{ url_for('blockchain.detalle_bloque', hash_bloque=entrega.hash_blockchain) }}"
+                                   class="btn btn-sm btn-outline-success">
+                                    <i class="bi bi-search me-1"></i>Ver en blockchain
+                                </a>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-warning">Sin registro blockchain.</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Actualizar estado (solo empresa y gobierno) -->
+                {% if current_user.tipo_usuario in ['empresa', 'gobierno'] %}
+                <hr>
+                <h6 class="text-muted">Actualizar estado del proceso</h6>
+                <form action="{{ url_for('entrega.actualizar_estado', entrega_id=entrega.id) }}"
+                      method="POST" class="d-flex gap-2">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <select name="estado" class="form-select w-auto">
+                        <option value="pendiente" {% if entrega.estado == 'pendiente' %}selected{% endif %}>Pendiente</option>
+                        <option value="recibido" {% if entrega.estado == 'recibido' %}selected{% endif %}>Recibido</option>
+                        <option value="procesado" {% if entrega.estado == 'procesado' %}selected{% endif %}>Procesado</option>
+                        <option value="reciclado" {% if entrega.estado == 'reciclado' %}selected{% endif %}>Reciclado</option>
+                    </select>
+                    <button type="submit" class="btn btn-primary">Actualizar estado</button>
+                </form>
+                {% endif %}
+
+                <div class="mt-4">
+                    <a href="{{ url_for('entrega.listar') }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-1"></i>Volver a entregas
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

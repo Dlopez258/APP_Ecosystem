@@ -1,0 +1,74 @@
+{% extends "layout/base.html" %}
+{% block titulo %}Usuarios{% endblock %}
+
+{% block contenido %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-people me-2 text-success"></i>Usuarios del sistema</h2>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-success">
+                    <tr>
+                        <th>#</th>
+                        <th>Nombre</th>
+                        <th>Email</th>
+                        <th>Tipo</th>
+                        <th>Ciudad</th>
+                        <th>Puntos</th>
+                        <th>Fecha registro</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for usuario in usuarios %}
+                    <tr>
+                        <td>{{ usuario.id }}</td>
+                        <td>{{ usuario.nombre }}</td>
+                        <td>{{ usuario.email }}</td>
+                        <td>
+                            <span class="badge
+                                {% if usuario.tipo_usuario == 'gobierno' %}bg-primary
+                                {% elif usuario.tipo_usuario == 'empresa' %}bg-info text-dark
+                                {% else %}bg-success{% endif %}">
+                                {{ usuario.tipo_usuario }}
+                            </span>
+                        </td>
+                        <td>{{ usuario.ciudad or '—' }}</td>
+                        <td><span class="badge bg-warning text-dark">{{ usuario.puntos_acumulados }}</span></td>
+                        <td>{{ usuario.fecha_registro.strftime('%d/%m/%Y') }}</td>
+                        <td>
+                            <a href="{{ url_for('usuario.detalle', usuario_id=usuario.id) }}"
+                               class="btn btn-sm btn-outline-success me-1">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <a href="{{ url_for('usuario.editar', usuario_id=usuario.id) }}"
+                               class="btn btn-sm btn-outline-primary me-1">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <form action="{{ url_for('usuario.eliminar', usuario_id=usuario.id) }}"
+                                  method="POST" class="d-inline"
+                                  onsubmit="return confirm('¿Desactivar este usuario?')">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-4">
+                            No hay usuarios registrados.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

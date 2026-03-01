@@ -1,0 +1,48 @@
+{% extends "layout/base.html" %}
+{% block titulo %}{{ punto.nombre }}{% endblock %}
+
+{% block contenido %}
+<div class="row justify-content-center">
+    <div class="col-md-7">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="bi bi-pin-map me-2"></i>{{ punto.nombre }}</h5>
+            </div>
+            <div class="card-body">
+                <table class="table">
+                    <tr><th>Dirección:</th><td>{{ punto.direccion }}</td></tr>
+                    <tr><th>Ciudad:</th><td>{{ punto.ciudad }}</td></tr>
+                    <tr><th>Horario:</th><td>{{ punto.horario or '—' }}</td></tr>
+                    <tr>
+                        <th>Tipos aceptados:</th>
+                        <td>
+                            {% for tipo in punto.get_tipos_lista() %}
+                                <span class="badge bg-success me-1">{{ tipo }}</span>
+                            {% else %}
+                                <span class="text-muted">Todos</span>
+                            {% endfor %}
+                        </td>
+                    </tr>
+                    {% if punto.latitud and punto.longitud %}
+                    <tr><th>Coordenadas:</th><td>{{ punto.latitud }}, {{ punto.longitud }}</td></tr>
+                    {% endif %}
+                    <tr><th>Total entregas recibidas:</th><td>{{ punto.entregas | length }}</td></tr>
+                </table>
+
+                <div class="d-flex gap-2 mt-3">
+                    {% if current_user.puede_gestionar_puntos() %}
+                    <a href="{{ url_for('punto_recoleccion.editar', punto_id=punto.id) }}"
+                       class="btn btn-outline-primary">
+                        <i class="bi bi-pencil me-1"></i>Editar
+                    </a>
+                    {% endif %}
+                    <a href="{{ url_for('punto_recoleccion.listar') }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-1"></i>Volver
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

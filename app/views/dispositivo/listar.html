@@ -1,0 +1,72 @@
+{% extends "layout/base.html" %}
+{% block titulo %}Dispositivos{% endblock %}
+
+{% block contenido %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-phone me-2 text-success"></i>
+        {% if current_user.tipo_usuario == 'gobierno' %}Todos los dispositivos{% else %}Mis dispositivos{% endif %}
+    </h2>
+    {% if current_user.tipo_usuario != 'gobierno' %}
+    <a href="{{ url_for('dispositivo.nuevo') }}" class="btn btn-success">
+        <i class="bi bi-plus-circle me-1"></i>Registrar dispositivo
+    </a>
+    {% endif %}
+</div>
+
+{% if dispositivos %}
+<div class="row row-cols-1 row-cols-md-3 g-4">
+    {% for d in dispositivos %}
+    <div class="col">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="bi bi-cpu me-2 text-success"></i>{{ d.nombre }}
+                </h5>
+                <p class="card-text">
+                    <span class="badge bg-secondary me-1">{{ d.categoria }}</span>
+                    <span class="badge
+                        {% if d.estado == 'funcional' %}bg-success
+                        {% elif d.estado == 'dañado' %}bg-danger
+                        {% else %}bg-warning text-dark{% endif %}">
+                        {{ d.estado }}
+                    </span>
+                </p>
+                {% if d.marca %}<p class="text-muted small mb-1">Marca: {{ d.marca }}</p>{% endif %}
+                {% if d.peso_kg %}<p class="text-muted small mb-1">Peso: {{ d.peso_kg }} kg</p>{% endif %}
+                <p class="text-muted small">{{ d.fecha_registro.strftime('%d/%m/%Y') }}</p>
+            </div>
+            <div class="card-footer bg-transparent d-flex gap-2">
+                <a href="{{ url_for('dispositivo.detalle', dispositivo_id=d.id) }}"
+                   class="btn btn-sm btn-outline-success">
+                    <i class="bi bi-eye"></i> Ver
+                </a>
+                <a href="{{ url_for('dispositivo.editar', dispositivo_id=d.id) }}"
+                   class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-pencil"></i> Editar
+                </a>
+                <form action="{{ url_for('dispositivo.eliminar', dispositivo_id=d.id) }}"
+                      method="POST" class="d-inline"
+                      onsubmit="return confirm('¿Eliminar este dispositivo?')">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="text-center py-5">
+    <i class="bi bi-inbox text-muted" style="font-size: 4rem;"></i>
+    <h4 class="mt-3 text-muted">No tienes dispositivos registrados</h4>
+    {% if current_user.tipo_usuario != 'gobierno' %}
+    <a href="{{ url_for('dispositivo.nuevo') }}" class="btn btn-success mt-2">
+        Registrar mi primer dispositivo
+    </a>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}
+

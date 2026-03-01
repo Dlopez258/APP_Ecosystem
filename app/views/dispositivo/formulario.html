@@ -1,0 +1,65 @@
+{% extends "layout/base.html" %}
+{% block titulo %}{{ titulo }}{% endblock %}
+
+{% block contenido %}
+<div class="row justify-content-center">
+    <div class="col-md-7">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-phone me-2"></i>{{ titulo }}
+                </h5>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST" novalidate>
+                    {{ formulario.hidden_tag() }}
+
+                    <div class="row">
+                        <div class="col-md-8 mb-3">
+                            {{ formulario.nombre.label(class="form-label fw-semibold") }}
+                            {{ formulario.nombre(class="form-control" + (" is-invalid" if formulario.nombre.errors else ""),
+                                                placeholder="Ej: Samsung Galaxy S10") }}
+                            {% for e in formulario.nombre.errors %}
+                                <div class="invalid-feedback">{{ e }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            {{ formulario.categoria.label(class="form-label fw-semibold") }}
+                            {{ formulario.categoria(class="form-select") }}
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            {{ formulario.marca.label(class="form-label fw-semibold") }}
+                            {{ formulario.marca(class="form-control", placeholder="Ej: Samsung") }}
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            {{ formulario.estado.label(class="form-label fw-semibold") }}
+                            {{ formulario.estado(class="form-select") }}
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            {{ formulario.peso_kg.label(class="form-label fw-semibold") }}
+                            {{ formulario.peso_kg(class="form-control", placeholder="0.00") }}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        {{ formulario.descripcion.label(class="form-label fw-semibold") }}
+                        {{ formulario.descripcion(class="form-control", rows=3,
+                                                  placeholder="Descripción opcional del dispositivo...") }}
+                    </div>
+
+                    <div class="d-flex gap-2 mt-3">
+                        {{ formulario.submit(class="btn btn-success") }}
+                        <a href="{{ url_for('dispositivo.listar') }}" class="btn btn-outline-secondary">
+                            Cancelar
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

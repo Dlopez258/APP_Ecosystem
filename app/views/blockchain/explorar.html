@@ -1,0 +1,73 @@
+{% extends "layout/base.html" %}
+{% block titulo %}Explorador Blockchain{% endblock %}
+
+{% block contenido %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-link-45deg me-2 text-success"></i>Cadena de Bloques</h2>
+    <div class="d-flex gap-2 align-items-center">
+        {% if es_valida %}
+        <span class="badge bg-success fs-6">
+            <i class="bi bi-shield-check me-1"></i>Cadena válida
+        </span>
+        {% else %}
+        <span class="badge bg-danger fs-6">
+            <i class="bi bi-shield-x me-1"></i>¡Cadena comprometida!
+        </span>
+        {% endif %}
+        <a href="{{ url_for('blockchain.verificar') }}" class="btn btn-outline-success">
+            <i class="bi bi-check-circle me-1"></i>Verificar integridad
+        </a>
+    </div>
+</div>
+
+<p class="text-muted mb-4">
+    <strong>{{ total_bloques }}</strong> bloques en la cadena. Cada bloque contiene los datos
+    de una entrega de RAEE y su hash garantiza la trazabilidad e inmutabilidad.
+</p>
+
+<div class="row g-3">
+    {% for bloque in bloques %}
+    <div class="col-12">
+        <div class="card {% if bloque.indice == 0 %}bloque-genesis{% else %}bloque-card{% endif %}">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-1 text-center">
+                        <span class="badge {% if bloque.indice == 0 %}bg-warning text-dark{% else %}bg-success{% endif %} fs-5">
+                            #{{ bloque.indice }}
+                        </span>
+                    </div>
+                    <div class="col-md-7">
+                        <div class="mb-1">
+                            <small class="text-muted">Hash actual:</small>
+                            <code class="hash-code d-block">{{ bloque.hash_actual }}</code>
+                        </div>
+                        <div>
+                            <small class="text-muted">Hash previo:</small>
+                            <code class="hash-code d-block">{{ bloque.hash_previo }}</code>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted d-block">Timestamp:</small>
+                        <small>{{ bloque.timestamp }}</small>
+                        {% if bloque.indice == 0 %}
+                        <div class="mt-1"><span class="badge bg-warning text-dark">Bloque Génesis</span></div>
+                        {% else %}
+                        <div class="mt-1">
+                            <small class="text-muted">Entrega #{{ bloque.datos.get('entrega_id', '—') }}</small>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-1 text-end">
+                        <a href="{{ url_for('blockchain.detalle_bloque', hash_bloque=bloque.hash_actual) }}"
+                           class="btn btn-sm btn-outline-success">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
+

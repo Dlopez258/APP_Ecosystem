@@ -1,0 +1,111 @@
+{% extends "layout/base.html" %}
+{% block titulo %}Recompensas{% endblock %}
+
+{% block contenido %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-trophy me-2 text-success"></i>Recompensas</h2>
+    {% if current_user.tipo_usuario == 'gobierno' %}
+    <a href="{{ url_for('recompensa.nueva') }}" class="btn btn-success">
+        <i class="bi bi-plus-circle me-1"></i>Nueva recompensa
+    </a>
+    {% endif %}
+</div>
+
+<!-- Panel de nivel del usuario -->
+{% if current_user.tipo_usuario != 'gobierno' %}
+<div class="card mb-4 border-{{ nivel_info.color }}">
+    <div class="card-body">
+        <div class="row align-items-center">
+            <div class="col-md-4 text-center">
+                <span class="badge bg-{{ nivel_info.color }} badge-nivel fs-5">
+                    🏅 Nivel {{ nivel_info.nivel }}
+                </span>
+                <p class="text-muted small mt-2">{{ current_user.puntos_acumulados }} puntos acumulados</p>
+            </div>
+            <div class="col-md-8">
+                <p class="mb-1 fw-semibold">Progreso hacia el siguiente nivel</p>
+                {% if puntos_faltantes > 0 %}
+                <div class="progress" style="height: 20px;">
+                    {% set porcentaje = ((current_user.puntos_acumulados % 500) / 500 * 100) | int %}
+                    <div class="progress-bar bg-{{ nivel_info.color }}" style="width: {{ porcentaje }}%;">
+                        {{ porcentaje }}%
+                    </div>
+                </div>
+                <small class="text-muted">Faltan {{ puntos_faltantes }} puntos para subir de nivel</small>
+                {% else %}
+                <div class="progress" style="height: 20px;">
+                    <div class="progress-bar bg-info" style="width: 100%;">¡Nivel máximo!</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recompensas disponibles para el usuario -->
+{% if recompensas_disponibles %}
+<h5 class="mb-3"><i class="bi bi-star-fill text-warning me-2"></i>Disponibles para canjear</h5>
+<div class="row row-cols-1 row-cols-md-3 g-3 mb-4">
+    {% for r in recompensas_disponibles %}
+    <div class="col">
+        <div class="card h-100 border-success">
+            <div class="card-body">
+                <h6 class="card-title">{{ r.nombre }}</h6>
+                <p class="card-text text-muted small">{{ r.descripcion }}</p>
+                <span class="badge bg-warning text-dark">{{ r.puntos_requeridos }} pts</span>
+                <span class="badge bg-secondary ms-1">{{ r.tipo }}</span>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endif %}
+
+<!-- Catálogo completo de recompensas -->
+<h5 class="mb-3">Catálogo completo</h5>
+<div class="row row-cols-1 row-cols-md-3 g-3">
+    {% for r in recompensas %}
+    <div class="col">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <h6 class="card-title">{{ r.nombre }}</h6>
+                    <span class="badge
+                        {% if r.tipo == 'descuento' %}bg-primary
+                        {% elif r.tipo == 'producto' %}bg-info text-dark
+                        {% else %}bg-success{% endif %}">
+                        {{ r.tipo }}
+                    </span>
+                </div>
+                <p class="card-text text-muted small">{{ r.descripcion or '' }}</p>
+                <p class="fw-bold text-warning">
+                    <i class="bi bi-star-fill me-1"></i>{{ r.puntos_requeridos }} puntos
+                </p>
+            </div>
+            {% if current_user.tipo_usuario == 'gobierno' %}
+            <div class="card-footer bg-transparent d-flex gap-2">
+                <a href="{{ url_for('recompensa.editar', recompensa_id=r.id) }}"
+                   class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-pencil"></i> Editar
+                </a>
+                <form action="{{ url_for('recompensa.eliminar', recompensa_id=r.id) }}"
+                      method="POST" class="d-inline"
+                      onsubmit="return confirm('¿Desactivar esta recompensa?')">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
+    <div class="col-12">
+        <p class="text-muted text-center py-4">No hay recompensas disponibles aún.</p>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
+

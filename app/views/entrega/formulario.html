@@ -1,0 +1,71 @@
+{% extends "layout/base.html" %}
+{% block titulo %}Nueva entrega{% endblock %}
+
+{% block contenido %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="bi bi-box-arrow-in-down me-2"></i>Registrar nueva entrega</h5>
+            </div>
+            <div class="card-body p-4">
+                {% if formulario.dispositivo_id.choices %}
+                <div class="alert alert-info small">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Ganarás puntos según la categoría del dispositivo que entregues.
+                </div>
+
+                <form method="POST" novalidate>
+                    {{ formulario.hidden_tag() }}
+
+                    <div class="mb-3">
+                        {{ formulario.dispositivo_id.label(class="form-label fw-semibold") }}
+                        {{ formulario.dispositivo_id(class="form-select" + (" is-invalid" if formulario.dispositivo_id.errors else "")) }}
+                        {% for e in formulario.dispositivo_id.errors %}
+                            <div class="invalid-feedback">{{ e }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="mb-3">
+                        {{ formulario.punto_recoleccion_id.label(class="form-label fw-semibold") }}
+                        {{ formulario.punto_recoleccion_id(class="form-select" + (" is-invalid" if formulario.punto_recoleccion_id.errors else "")) }}
+                        {% for e in formulario.punto_recoleccion_id.errors %}
+                            <div class="invalid-feedback">{{ e }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="d-grid mt-4">
+                        {{ formulario.submit(class="btn btn-success btn-lg") }}
+                    </div>
+                </form>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-exclamation-triangle text-warning" style="font-size: 3rem;"></i>
+                    <h5 class="mt-3">No tienes dispositivos disponibles</h5>
+                    <p class="text-muted">Registra un dispositivo antes de hacer una entrega.</p>
+                    <a href="{{ url_for('dispositivo.nuevo') }}" class="btn btn-success">
+                        <i class="bi bi-plus me-1"></i>Registrar dispositivo
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Tabla de puntos por categoría -->
+        <div class="card mt-3">
+            <div class="card-header"><strong>Puntos por categoría</strong></div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <tr><td>📱 Celular</td><td class="text-end"><span class="badge bg-warning text-dark">50 pts</span></td></tr>
+                    <tr><td>💻 Computador</td><td class="text-end"><span class="badge bg-warning text-dark">100 pts</span></td></tr>
+                    <tr><td>🔋 Batería</td><td class="text-end"><span class="badge bg-warning text-dark">30 pts</span></td></tr>
+                    <tr><td>🏠 Electrodoméstico</td><td class="text-end"><span class="badge bg-warning text-dark">80 pts</span></td></tr>
+                    <tr><td>🖥️ Tarjeta madre</td><td class="text-end"><span class="badge bg-warning text-dark">40 pts</span></td></tr>
+                    <tr><td>📦 Otro</td><td class="text-end"><span class="badge bg-warning text-dark">20 pts</span></td></tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

@@ -1,0 +1,53 @@
+{% extends "layout/base.html" %}
+{% block titulo %}Editar usuario{% endblock %}
+
+{% block contenido %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="bi bi-pencil me-2"></i>Editar usuario</h5>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST" novalidate>
+                    {{ formulario.hidden_tag() }}
+
+                    <div class="mb-3">
+                        {{ formulario.nombre.label(class="form-label fw-semibold") }}
+                        {{ formulario.nombre(class="form-control" + (" is-invalid" if formulario.nombre.errors else "")) }}
+                        {% for error in formulario.nombre.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="mb-3">
+                        {{ formulario.email.label(class="form-label fw-semibold") }}
+                        {{ formulario.email(class="form-control" + (" is-invalid" if formulario.email.errors else "")) }}
+                        {% for error in formulario.email.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            {{ formulario.ciudad.label(class="form-label fw-semibold") }}
+                            {{ formulario.ciudad(class="form-control") }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ formulario.tipo_usuario.label(class="form-label fw-semibold") }}
+                            {{ formulario.tipo_usuario(class="form-select") }}
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2 mt-3">
+                        {{ formulario.submit(class="btn btn-success") }}
+                        <a href="{{ url_for('usuario.detalle', usuario_id=usuario.id) }}"
+                           class="btn btn-outline-secondary">Cancelar</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

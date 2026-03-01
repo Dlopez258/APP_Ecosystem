@@ -1,0 +1,59 @@
+{% extends "layout/base.html" %}
+{% block titulo %}Bloque #{{ bloque.indice }}{% endblock %}
+
+{% block contenido %}
+<div class="row justify-content-center">
+    <div class="col-md-9">
+        <div class="card {% if bloque.indice == 0 %}bloque-genesis{% else %}bloque-card{% endif %}">
+            <div class="card-header bg-success text-white d-flex justify-content-between">
+                <h5 class="mb-0">
+                    <i class="bi bi-cube me-2"></i>Bloque #{{ bloque.indice }}
+                </h5>
+                {% if bloque.indice == 0 %}
+                <span class="badge bg-warning text-dark">Bloque Génesis</span>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold text-muted">Hash actual (SHA-256)</label>
+                    <code class="hash-code d-block p-2">{{ bloque.hash_actual }}</code>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold text-muted">Hash del bloque anterior</label>
+                    <code class="hash-code d-block p-2">{{ bloque.hash_previo }}</code>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold text-muted">Timestamp</label>
+                    <p class="mb-0">{{ bloque.timestamp }}</p>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold text-muted">Nonce</label>
+                    <p class="mb-0">{{ bloque.nonce }}</p>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold text-muted">Datos del bloque</label>
+                    <div class="bg-light p-3 rounded">
+                        {% if bloque.indice == 0 %}
+                        <p class="mb-0 text-muted fst-italic">{{ bloque.datos.get('mensaje', '') }}</p>
+                        {% else %}
+                        <table class="table table-sm mb-0">
+                            {% for clave, valor in bloque.datos.items() %}
+                            <tr>
+                                <th class="text-muted">{{ clave }}</th>
+                                <td>{{ valor }}</td>
+                            </tr>
+                            {% endfor %}
+                        </table>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <a href="{{ url_for('blockchain.explorar') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i>Volver a la cadena
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

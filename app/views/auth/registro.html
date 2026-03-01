@@ -1,0 +1,82 @@
+{% extends "layout/base.html" %}
+{% block titulo %}Crear cuenta{% endblock %}
+
+{% block contenido %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card mt-4">
+            <div class="card-body p-4">
+                <div class="text-center mb-4">
+                    <i class="bi bi-person-plus-fill text-success" style="font-size: 2.5rem;"></i>
+                    <h2 class="mt-2">Crear cuenta</h2>
+                    <p class="text-muted">Únete a la comunidad EcoSystem</p>
+                </div>
+
+                <form method="POST" novalidate>
+                    {{ formulario.hidden_tag() }}
+
+                    <div class="mb-3">
+                        {{ formulario.nombre.label(class="form-label fw-semibold") }}
+                        {{ formulario.nombre(class="form-control" + (" is-invalid" if formulario.nombre.errors else ""),
+                                            placeholder="Tu nombre completo") }}
+                        {% for error in formulario.nombre.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="mb-3">
+                        {{ formulario.email.label(class="form-label fw-semibold") }}
+                        {{ formulario.email(class="form-control" + (" is-invalid" if formulario.email.errors else ""),
+                                           placeholder="tu@email.com") }}
+                        {% for error in formulario.email.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            {{ formulario.ciudad.label(class="form-label fw-semibold") }}
+                            {{ formulario.ciudad(class="form-control", placeholder="Tu ciudad") }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ formulario.tipo_usuario.label(class="form-label fw-semibold") }}
+                            {{ formulario.tipo_usuario(class="form-select") }}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        {{ formulario.password.label(class="form-label fw-semibold") }}
+                        {{ formulario.password(class="form-control" + (" is-invalid" if formulario.password.errors else ""),
+                                              placeholder="Mínimo 6 caracteres") }}
+                        {% for error in formulario.password.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="mb-3">
+                        {{ formulario.confirmar_password.label(class="form-label fw-semibold") }}
+                        {{ formulario.confirmar_password(class="form-control" + (" is-invalid" if formulario.confirmar_password.errors else ""),
+                                                        placeholder="Repite la contraseña") }}
+                        {% for error in formulario.confirmar_password.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="d-grid mt-4">
+                        {{ formulario.submit(class="btn btn-success btn-lg") }}
+                    </div>
+                </form>
+
+                <hr>
+                <p class="text-center mb-0">
+                    ¿Ya tienes cuenta?
+                    <a href="{{ url_for('auth.login') }}" class="text-success fw-semibold">
+                        Inicia sesión
+                    </a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

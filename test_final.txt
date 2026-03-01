@@ -1,0 +1,44 @@
+﻿============================= test session starts =============================
+platform win32 -- Python 3.13.5, pytest-8.3.5, pluggy-1.6.0 -- C:\Users\andre\Desktop\Eje2_ArquitecturaSoftware\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\andre\Desktop\Eje2_ArquitecturaSoftware
+collecting ... collected 25 items
+
+tests/test_blockchain.py::TestBloque::test_calcular_hash_es_reproducible PASSED [  4%]
+tests/test_blockchain.py::TestBloque::test_hash_cambia_si_datos_cambian PASSED [  8%]
+tests/test_blockchain.py::TestBloque::test_hash_es_sha256 PASSED         [ 12%]
+tests/test_blockchain.py::TestBloque::test_to_dict PASSED                [ 16%]
+tests/test_blockchain.py::TestCadenaBloques::test_singleton PASSED       [ 20%]
+tests/test_blockchain.py::TestCadenaBloques::test_bloque_genesis PASSED  [ 24%]
+tests/test_blockchain.py::TestCadenaBloques::test_agregar_bloque PASSED  [ 28%]
+tests/test_blockchain.py::TestCadenaBloques::test_encadenamiento_correcto PASSED [ 32%]
+tests/test_blockchain.py::TestCadenaBloques::test_cadena_valida PASSED   [ 36%]
+tests/test_blockchain.py::TestCadenaBloques::test_cadena_invalida_si_alterada PASSED [ 40%]
+tests/test_blockchain.py::TestCadenaBloques::test_obtener_bloque_por_hash PASSED [ 44%]
+tests/test_blockchain.py::TestCadenaBloques::test_obtener_todos_como_dict PASSED [ 48%]
+tests/test_controllers.py::TestRutasAuth::test_login_get PASSED          [ 52%]
+tests/test_controllers.py::TestRutasAuth::test_registro_get PASSED       [ 56%]
+tests/test_controllers.py::TestRutasAuth::test_login_credenciales_incorrectas PASSED [ 60%]
+tests/test_controllers.py::TestRutasAuth::test_ruta_protegida_sin_login PASSED [ 64%]
+tests/test_controllers.py::TestRutasAuth::test_registro_nuevo_usuario PASSED [ 68%]
+tests/test_controllers.py::TestRutasDispositivo::test_listar_dispositivos_sin_auth PASSED [ 72%]
+tests/test_controllers.py::TestRutasDispositivo::test_nuevo_dispositivo_sin_auth PASSED [ 76%]
+tests/test_models.py::TestModeloUsuario::test_crear_usuario PASSED       [ 80%]
+tests/test_models.py::TestModeloUsuario::test_password_hashing PASSED    [ 84%]
+tests/test_models.py::TestModeloUsuario::test_roles_usuario PASSED       [ 88%]
+tests/test_models.py::TestModeloUsuario::test_puntos_iniciales_en_cero PASSED [ 92%]
+tests/test_models.py::TestModeloDispositivo::test_crear_dispositivo PASSED [ 96%]
+tests/test_models.py::TestModeloRecompensa::test_crear_recompensa PASSED [100%]
+
+============================== warnings summary ===============================
+tests/test_controllers.py::TestRutasAuth::test_login_credenciales_incorrectas
+tests/test_controllers.py::TestRutasAuth::test_registro_nuevo_usuario
+tests/test_models.py::TestModeloUsuario::test_crear_usuario
+tests/test_models.py::TestModeloUsuario::test_puntos_iniciales_en_cero
+tests/test_models.py::TestModeloDispositivo::test_crear_dispositivo
+tests/test_models.py::TestModeloDispositivo::test_crear_dispositivo
+  C:\Users\andre\Desktop\Eje2_ArquitecturaSoftware\.venv\Lib\site-packages\sqlalchemy\sql\schema.py:3624: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    return util.wrap_callable(lambda ctx: fn(), fn)  # type: ignore
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================= 25 passed, 6 warnings in 3.58s ========================

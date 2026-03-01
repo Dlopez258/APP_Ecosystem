@@ -1,0 +1,76 @@
+{% extends "layout/base.html" %}
+{% block titulo %}Puntos de recolección{% endblock %}
+
+{% block contenido %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-geo-alt me-2 text-success"></i>Puntos de recolección</h2>
+    {% if current_user.puede_gestionar_puntos() %}
+    <a href="{{ url_for('punto_recoleccion.nuevo') }}" class="btn btn-success">
+        <i class="bi bi-plus-circle me-1"></i>Nuevo punto
+    </a>
+    {% endif %}
+</div>
+
+{% if puntos %}
+<div class="row row-cols-1 row-cols-md-3 g-4">
+    {% for p in puntos %}
+    <div class="col">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title"><i class="bi bi-pin-map text-success me-2"></i>{{ p.nombre }}</h5>
+                <p class="card-text text-muted mb-1">
+                    <i class="bi bi-map me-1"></i>{{ p.direccion }}
+                </p>
+                <p class="card-text text-muted mb-1">
+                    <i class="bi bi-building me-1"></i>{{ p.ciudad }}
+                </p>
+                {% if p.horario %}
+                <p class="card-text text-muted small mb-1">
+                    <i class="bi bi-clock me-1"></i>{{ p.horario }}
+                </p>
+                {% endif %}
+                {% if p.tipos_aceptados %}
+                <div class="mt-2">
+                    {% for tipo in p.get_tipos_lista() %}
+                    <span class="badge bg-success me-1">{{ tipo }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            <div class="card-footer bg-transparent d-flex gap-2">
+                <a href="{{ url_for('punto_recoleccion.detalle', punto_id=p.id) }}"
+                   class="btn btn-sm btn-outline-success">
+                    <i class="bi bi-eye"></i> Ver
+                </a>
+                {% if current_user.puede_gestionar_puntos() %}
+                <a href="{{ url_for('punto_recoleccion.editar', punto_id=p.id) }}"
+                   class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-pencil"></i> Editar
+                </a>
+                <form action="{{ url_for('punto_recoleccion.eliminar', punto_id=p.id) }}"
+                      method="POST" class="d-inline"
+                      onsubmit="return confirm('¿Desactivar este punto?')">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="text-center py-5">
+    <i class="bi bi-geo-alt text-muted" style="font-size: 4rem;"></i>
+    <h4 class="mt-3 text-muted">No hay puntos de recolección activos</h4>
+    {% if current_user.puede_gestionar_puntos() %}
+    <a href="{{ url_for('punto_recoleccion.nuevo') }}" class="btn btn-success mt-2">
+        Crear primer punto
+    </a>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}
+
