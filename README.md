@@ -355,24 +355,10 @@ El resultado final es el archivo **`instance/ecosystem_mysql.sql`**: un esquema 
 
 ---
 
-### ¿Por qué MySQL y no PostgreSQL?
 
-El SQL aportado por el compañero fue escrito originalmente en **sintaxis PostgreSQL** (`SERIAL`, `CHECK` con regex `~*`, etc.), que **no es compatible directamente con MySQL**. La decisión de usar MySQL se basa en:
-
-| Criterio | Razón |
-|---|---|
-| `copilot-instructions.md` lo especifica | El stack tecnológico del proyecto define explícitamente MySQL 8.x |
-| `requirements.txt` ya incluía `PyMySQL==1.1.1` | El driver ya estaba instalado |
-| `config.py` ya tenía el URI configurado | `mysql+pymysql://root:password@localhost:3306/ecosystem_db` |
-| Los modelos usan `ENUM` nativo | MySQL soporta `ENUM` directamente igual que los modelos ORM |
-
-El archivo del compañero **no se importó directamente**. En su lugar, sus columnas y estructuras se integraron manualmente al esquema MySQL y a los modelos SQLAlchemy.
-
----
 
 ### Proceso de integración del esquema colaborativo
 
-El esquema del compañero tenía 4 tablas (`usuarios`, `puntos_recoleccion`, `dispositivos`, `entregas`) y 1 vista SQL (`resumen_usuario_entregas`). A continuación se detalla qué se tomó y qué se conservó de cada parte:
 
 #### Tabla `usuarios`
 | Columna | Origen | Decisión |
