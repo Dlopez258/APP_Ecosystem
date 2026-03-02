@@ -345,19 +345,7 @@ def nuevo(): ...
 
 ### Contexto y origen del esquema
 
-El esquema de la base de datos de EcoSystem es el resultado de un proceso de integración colaborativa entre dos diseños:
-
-1. **Diseño original del proyecto Flask** — construido directamente sobre los modelos SQLAlchemy con SQLite para desarrollo local, y orientado a soportar el patrón MVC con DAOs, DTOs y la lógica de gamificación + blockchain.
-
-2. **Aporte del compañero de equipo** — un esquema SQL independiente escrito en sintaxis PostgreSQL que aportó columnas y estructuras nuevas que enriquecen el dominio del negocio.
-
-El resultado final es el archivo **`instance/ecosystem_mysql.sql`**: un esquema unificado, escrito en MySQL 8.x, compatible 100% con los modelos SQLAlchemy del proyecto.
-
----
-
-
-
-### Proceso de integración del esquema colaborativo
+### Proceso de integración 
 
 
 #### Tabla `usuarios`
