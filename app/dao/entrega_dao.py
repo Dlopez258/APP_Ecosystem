@@ -167,12 +167,41 @@ class EntregaDAO:
             list[tuple]: Lista de (mes, total).
         """
         from sqlalchemy import extract
-        from datetime import datetime
-        anio_actual = datetime.utcnow().year
+        from datetime import datetime, timezone
+        anio_actual = datetime.now(timezone.utc).year
         return db.session.query(
             extract('month', Entrega.fecha_entrega).label('mes'),
             db.func.count(Entrega.id).label('total')
         ).filter(
             extract('year', Entrega.fecha_entrega) == anio_actual
         ).group_by('mes').order_by('mes').all()
+
+    @staticmethod
+    def resumen_por_usuario():
+        """
+        Retorna el resumen de actividad por usuario: total de entregas,
+        dispositivos, peso y última entrega.
+        Implementa la lógica de la vista 'resumen_usuario_entregas'
+        aportada por el compañero de equipo.
+
+        Returns:
+            list[tuple]: Cada fila contiene
+                (id, nombre, ciudad, puntos_acumulados,
+                 total_entregas, total_dispositivos, total_kg, ultima_entrega)
+        """
+        from app.models.usuario import Usuario
+        from sqlalchemy import func
+        return db.session.query(
+            Usuario.id,
+            Usuario.nombre,
+            Usuario.ciudad,
+            Usuario.puntos_acumulados,
+            func.count(Entrega.id).label('total_entregas'),
+            func.coalesce(func.sum(Entrega.cantidad), 0).label('total_dispositivos'),
+            func.round(func.coalesce(func.sum(Entrega.peso_kg), 0), 2).label('total_kg'),
+            func.max(Entrega.fecha_entrega).label('ultima_entrega')
+        ).outerjoin(Entrega, Entrega.usuario_id == Usuario.id)\
+         .filter(Usuario.activo == True)\
+         .group_by(Usuario.id, Usuario.nombre, Usuario.ciudad, Usuario.puntos_acumulados)\
+         .order_by(func.count(Entrega.id).desc()).all()
 

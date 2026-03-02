@@ -15,7 +15,7 @@ class PuntoRecoleccionDAO:
 
     @staticmethod
     def crear(nombre, direccion, ciudad, latitud=None, longitud=None,
-              horario=None, tipos_aceptados=None):
+              horario=None, tipos_aceptados=None, entidad=None):
         """
         Crea un nuevo punto de recolección en la base de datos.
 
@@ -27,6 +27,7 @@ class PuntoRecoleccionDAO:
             longitud (float):       Coordenada longitud (opcional).
             horario (str):          Descripción del horario de atención (opcional).
             tipos_aceptados (str):  Categorías aceptadas, separadas por coma (opcional).
+            entidad (str):          Entidad responsable del punto (opcional).
 
         Returns:
             PuntoRecoleccion: El punto creado y persistido.
@@ -38,7 +39,8 @@ class PuntoRecoleccionDAO:
             latitud=latitud,
             longitud=longitud,
             horario=horario,
-            tipos_aceptados=tipos_aceptados
+            tipos_aceptados=tipos_aceptados,
+            entidad=entidad
         )
         db.session.add(punto)
         db.session.commit()
@@ -82,12 +84,13 @@ class PuntoRecoleccionDAO:
 
     @staticmethod
     def actualizar(punto_id, nombre, direccion, ciudad, latitud=None,
-                   longitud=None, horario=None, tipos_aceptados=None):
+                   longitud=None, horario=None, tipos_aceptados=None, entidad=None):
         """
         Actualiza los datos de un punto de recolección.
 
         Args:
             punto_id (int): ID del punto a actualizar.
+            entidad (str):  Entidad responsable del punto (opcional).
             (demás argumentos igual que crear)
 
         Returns:
@@ -103,6 +106,7 @@ class PuntoRecoleccionDAO:
         punto.longitud = longitud
         punto.horario = horario
         punto.tipos_aceptados = tipos_aceptados
+        punto.entidad = entidad
         db.session.commit()
         return punto
 

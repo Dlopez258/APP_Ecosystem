@@ -16,7 +16,9 @@ Aplicación web desarrollada en **Python + Flask** que conecta ciudadanos, empre
 
 ## 🚀 Instalación y ejecución
 
-> ⚠️ **Requisito previo:** Tener instalado [Python 3.10+](https://www.python.org/downloads/)
+> ⚠️ **Requisitos previos:**
+> - [Python 3.10+](https://www.python.org/downloads/)
+> - [MySQL 8.x](https://dev.mysql.com/downloads/mysql/) instalado y corriendo localmente
 
 ### 1. Clonar el repositorio
 ```bash
@@ -57,13 +59,19 @@ copy .env.example .env
 # Linux / Mac
 cp .env.example .env
 ```
-> Para desarrollo local con SQLite **no necesitas cambiar nada**. El `.env` ya viene preconfigurado para funcionar sin MySQL.
-
-### 6. Inicializar la base de datos
-```bash
-python init_db.py
+Edita el archivo `.env` con tus credenciales de MySQL:
 ```
-> Esto crea automáticamente el archivo `ecosystem_dev.db` con todas las tablas necesarias.
+SECRET_KEY=tu-clave-secreta-aqui
+DATABASE_URL=mysql+pymysql://root:TU_PASSWORD@localhost:3306/ecosystem_db
+FLASK_ENV=development
+FLASK_DEBUG=1
+```
+
+### 6. Crear la base de datos en MySQL
+```bash
+mysql -u root -p < instance/ecosystem_mysql.sql
+```
+> Esto crea la base de datos `ecosystem_db`, todas las tablas, la vista analítica y los datos de prueba iniciales.
 
 ### 7. Ejecutar la aplicación
 ```bash
@@ -71,12 +79,21 @@ python run.py
 ```
 Abre tu navegador en: **http://localhost:5000**
 
+**Usuarios de prueba incluidos en el seed:**
+
+| Email | Contraseña | Rol |
+|---|---|---|
+| `ciudadano@test.com` | `ciudadano123` | Ciudadano |
+| `empresa@test.com` | `empresa123` | Empresa |
+| `gobierno@test.com` | `gobierno123` | Gobierno |
+
 ---
 
 ## 🧪 Ejecutar tests
 ```bash
 pytest tests/ -v
 ```
+> Los tests usan SQLite en memoria (sin necesidad de MySQL). Los 25 tests deben pasar.
 
 ---
 
@@ -93,6 +110,9 @@ Eje2_ArquitecturaSoftware/
 │   ├── dto/                 # Data Transfer Objects
 │   ├── services/            # Servicios (Blockchain, Gamificación)
 │   └── static/              # CSS, JS, imágenes
+├── instance/
+│   └── ecosystem_mysql.sql  # Esquema MySQL unificado (con datos de prueba)
+├── migrations/              # Migraciones Alembic (Flask-Migrate)
 ├── tests/                   # Tests con pytest
 ├── config.py                # Configuración por entorno
 ├── run.py                   # Punto de entrada
@@ -101,13 +121,289 @@ Eje2_ArquitecturaSoftware/
 
 ---
 
+## 🗄️ Base de Datos
+
+### Contexto y origen del esquema
+
+El esquema de la base de datos de EcoSystem es el resultado de un proceso de integración colaborativa entre dos diseños:
+
+1. **Diseño original del proyecto Flask** — construido directamente sobre los modelos SQLAlchemy con SQLite para desarrollo local, y orientado a soportar el patrón MVC con DAOs, DTOs y la lógica de gamificación + blockchain.
+
+2. **Aporte del compañero de equipo** — un esquema SQL independiente escrito en sintaxis PostgreSQL que aportó columnas y estructuras nuevas que enriquecen el dominio del negocio.
+
+El resultado final es el archivo **`instance/ecosystem_mysql.sql`**: un esquema unificado, escrito en MySQL 8.x, compatible 100% con los modelos SQLAlchemy del proyecto.
+
+---
+
+### ¿Por qué MySQL y no PostgreSQL?
+
+El SQL aportado por el compañero fue escrito originalmente en **sintaxis PostgreSQL** (`SERIAL`, `CHECK` con regex `~*`, etc.), que **no es compatible directamente con MySQL**. La decisión de usar MySQL se basa en:
+
+| Criterio | Razón |
+|---|---|
+| `copilot-instructions.md` lo especifica | El stack tecnológico del proyecto define explícitamente MySQL 8.x |
+| `requirements.txt` ya incluía `PyMySQL==1.1.1` | El driver ya estaba instalado |
+| `config.py` ya tenía el URI configurado | `mysql+pymysql://root:password@localhost:3306/ecosystem_db` |
+| Los modelos usan `ENUM` nativo | MySQL soporta `ENUM` directamente igual que los modelos ORM |
+
+El archivo del compañero **no se importó directamente**. En su lugar, sus columnas y estructuras se integraron manualmente al esquema MySQL y a los modelos SQLAlchemy.
+
+---
+
+### Proceso de integración del esquema colaborativo
+
+El esquema del compañero tenía 4 tablas (`usuarios`, `puntos_recoleccion`, `dispositivos`, `entregas`) y 1 vista SQL (`resumen_usuario_entregas`). A continuación se detalla qué se tomó y qué se conservó de cada parte:
+
+#### Tabla `usuarios`
+| Columna | Origen | Decisión |
+|---|---|---|
+| `id`, `nombre`, `email` | Ambos | ✅ Conservado del proyecto (nombre `id` requerido por Flask-Login) |
+| `password_hash`, `puntos_acumulados`, `activo` | Proyecto original | ✅ Conservado — esenciales para autenticación y gamificación |
+| `tipo_usuario` ENUM | Proyecto original | ✅ Conservado — el compañero usaba `rol` VARCHAR con valores distintos |
+| `telefono`, `barrio` | **Aporte del compañero** | ✅ **Integrado** — enriquece el perfil del ciudadano |
+| `ciudad` | Proyecto original | ✅ Conservado (equivalente a `municipio` del compañero) |
+
+#### Tabla `dispositivos`
+| Columna | Origen | Decisión |
+|---|---|---|
+| `nombre`, `marca`, `usuario_id`, `peso_kg` | Proyecto original | ✅ Conservado |
+| `tablet`, `impresora` en ENUM categoría | **Aporte del compañero** | ✅ **Integrado** — amplía los tipos de RAEE aceptados |
+| `nuevo`, `irreparable` en ENUM estado | **Aporte del compañero** | ✅ **Integrado** — refleja mejor el ciclo de vida del dispositivo |
+
+#### Tabla `entregas`
+| Columna | Origen | Decisión |
+|---|---|---|
+| `usuario_id`, `dispositivo_id`, `punto_recoleccion_id` | Ambos | ✅ Conservado |
+| `puntos_otorgados`, `hash_blockchain` | Proyecto original | ✅ Conservado — esenciales para gamificación y blockchain |
+| `cantidad`, `observaciones` | **Aporte del compañero** | ✅ **Integrado** — permite registrar entregas de múltiples unidades |
+| `peso_kg` | **Aporte del compañero** | ✅ **Integrado** — dato real para estadísticas del dashboard |
+| `verificado`, `en_proceso`, `reutilizado` en ENUM estado | **Aporte del compañero** | ✅ **Integrado** — ciclo de vida más completo |
+
+#### Tabla `puntos_recoleccion`
+| Columna | Origen | Decisión |
+|---|---|---|
+| `nombre`, `direccion`, `ciudad`, `latitud`, `longitud`, `horario`, `tipos_aceptados`, `activo` | Proyecto original | ✅ Conservado |
+| `entidad` | **Aporte del compañero** | ✅ **Integrado** — identifica al responsable del punto (Alcaldía, ONG, empresa) |
+| `fecha_creacion` | **Aporte del compañero** | ✅ **Integrado** — trazabilidad de cuándo se registró el punto |
+
+#### Vista `resumen_usuario_entregas`
+El compañero propuso una vista SQL que calcula el resumen de actividad por usuario. Se adoptó su lógica de dos formas:
+1. **Como vista SQL** en `ecosystem_mysql.sql` para consultas directas en MySQL.
+2. **Como método ORM** `EntregaDAO.resumen_por_usuario()` para usarla desde Flask sin salir del patrón DAO.
+
+#### Tablas exclusivas del proyecto (sin equivalente en el aporte del compañero)
+| Tabla | Motivo de conservación |
+|---|---|
+| `recompensas` | Soporte al sistema de gamificación (canje de puntos) |
+| `bloques_blockchain` | Persistencia de la cadena de bloques simulada entre reinicios del servidor |
+
+---
+
+### Esquema final de la base de datos (MySQL 8.x)
+
+**Motor:** InnoDB | **Charset:** utf8mb4 | **Collation:** utf8mb4_unicode_ci
+
+#### Tabla `usuarios`
+| Columna | Tipo | Restricciones | Descripción |
+|---|---|---|---|
+| `id` | INT | PK AUTO_INCREMENT | Identificador único |
+| `nombre` | VARCHAR(120) | NOT NULL | Nombre completo |
+| `email` | VARCHAR(150) | UNIQUE NOT NULL | Correo para login |
+| `password_hash` | VARCHAR(256) | NOT NULL | Hash Werkzeug de la contraseña |
+| `tipo_usuario` | ENUM | NOT NULL DEFAULT 'ciudadano' | `ciudadano` / `empresa` / `gobierno` |
+| `puntos_acumulados` | INT | DEFAULT 0 | Puntos de gamificación |
+| `ciudad` | VARCHAR(100) | — | Ciudad principal |
+| `telefono` | VARCHAR(20) | — | Teléfono de contacto *(aporte compañero)* |
+| `barrio` | VARCHAR(100) | — | Barrio o sector *(aporte compañero)* |
+| `fecha_registro` | DATETIME | DEFAULT CURRENT_TIMESTAMP | Fecha de registro |
+| `activo` | TINYINT(1) | DEFAULT 1 | Eliminación lógica |
+
+#### Tabla `dispositivos`
+| Columna | Tipo | Restricciones | Descripción |
+|---|---|---|---|
+| `id` | INT | PK AUTO_INCREMENT | Identificador único |
+| `nombre` | VARCHAR(100) | NOT NULL | Nombre descriptivo |
+| `categoria` | ENUM | NOT NULL | `celular` / `computador` / `bateria` / `electrodomestico` / `tarjeta_madre` / `tablet` / `impresora` / `otro` |
+| `marca` | VARCHAR(100) | — | Marca del dispositivo |
+| `estado` | ENUM | NOT NULL | `nuevo` / `funcional` / `dañado` / `obsoleto` / `irreparable` |
+| `peso_kg` | DECIMAL(6,2) | — | Peso en kilogramos |
+| `descripcion` | TEXT | — | Descripción adicional |
+| `usuario_id` | INT | FK → usuarios(id) CASCADE | Propietario del dispositivo |
+| `fecha_registro` | DATETIME | DEFAULT CURRENT_TIMESTAMP | Fecha de registro |
+
+#### Tabla `puntos_recoleccion`
+| Columna | Tipo | Restricciones | Descripción |
+|---|---|---|---|
+| `id` | INT | PK AUTO_INCREMENT | Identificador único |
+| `nombre` | VARCHAR(150) | NOT NULL | Nombre del punto |
+| `direccion` | VARCHAR(255) | NOT NULL | Dirección física |
+| `ciudad` | VARCHAR(100) | NOT NULL | Ciudad (indexada) |
+| `latitud` | DECIMAL(10,8) | — | Coordenada geográfica |
+| `longitud` | DECIMAL(11,8) | — | Coordenada geográfica |
+| `horario` | VARCHAR(200) | — | Horario de atención |
+| `tipos_aceptados` | VARCHAR(255) | — | Categorías separadas por coma |
+| `entidad` | VARCHAR(120) | — | Responsable: Alcaldía, ONG, empresa *(aporte compañero)* |
+| `fecha_creacion` | DATETIME | DEFAULT CURRENT_TIMESTAMP | Fecha de registro *(aporte compañero)* |
+| `activo` | TINYINT(1) | DEFAULT 1 | Eliminación lógica |
+
+#### Tabla `entregas`
+| Columna | Tipo | Restricciones | Descripción |
+|---|---|---|---|
+| `id` | INT | PK AUTO_INCREMENT | Identificador único |
+| `usuario_id` | INT | FK → usuarios(id) CASCADE | Usuario que entrega |
+| `dispositivo_id` | INT | FK → dispositivos(id) RESTRICT | Dispositivo entregado |
+| `punto_recoleccion_id` | INT | FK → puntos_recoleccion(id) RESTRICT | Punto receptor |
+| `fecha_entrega` | DATETIME | DEFAULT CURRENT_TIMESTAMP | Fecha de la entrega |
+| `estado` | ENUM | DEFAULT 'pendiente' | `pendiente` / `recibido` / `verificado` / `en_proceso` / `procesado` / `reutilizado` / `reciclado` |
+| `puntos_otorgados` | INT | DEFAULT 0 | Puntos dados al usuario |
+| `hash_blockchain` | VARCHAR(256) | — | Hash SHA-256 del bloque asociado |
+| `cantidad` | SMALLINT | DEFAULT 1 | Unidades entregadas *(aporte compañero)* |
+| `peso_kg` | DECIMAL(6,2) | — | Peso total en kg *(aporte compañero)* |
+| `observaciones` | TEXT | — | Notas adicionales *(aporte compañero)* |
+
+#### Tabla `recompensas`
+| Columna | Tipo | Restricciones | Descripción |
+|---|---|---|---|
+| `id` | INT | PK AUTO_INCREMENT | Identificador único |
+| `nombre` | VARCHAR(150) | NOT NULL | Nombre de la recompensa |
+| `descripcion` | TEXT | — | Descripción detallada |
+| `puntos_requeridos` | INT | NOT NULL | Puntos necesarios para canjear |
+| `tipo` | ENUM | NOT NULL | `descuento` / `producto` / `reconocimiento` |
+| `activo` | TINYINT(1) | DEFAULT 1 | Eliminación lógica |
+
+#### Tabla `bloques_blockchain`
+| Columna | Tipo | Restricciones | Descripción |
+|---|---|---|---|
+| `id` | INT | PK AUTO_INCREMENT | Identificador único |
+| `indice` | INT | NOT NULL | Posición en la cadena (0 = génesis) |
+| `timestamp` | DATETIME | NOT NULL | Fecha de creación del bloque |
+| `datos` | TEXT | NOT NULL | JSON con los datos de la entrega |
+| `hash_previo` | VARCHAR(256) | NOT NULL | Hash SHA-256 del bloque anterior |
+| `hash_actual` | VARCHAR(256) | NOT NULL | Hash SHA-256 de este bloque |
+| `nonce` | INT | DEFAULT 0 | Número de prueba de trabajo |
+
+#### Vista `resumen_usuario_entregas`
+Vista SQL que agrega la actividad de cada usuario activo. Equivalente al método `EntregaDAO.resumen_por_usuario()`.
+
+| Campo | Descripción |
+|---|---|
+| `id_usuario` | ID del usuario |
+| `nombre` | Nombre completo |
+| `ciudad` | Ciudad del usuario |
+| `puntos_acumulados` | Puntos totales acumulados |
+| `total_entregas` | Número de entregas realizadas |
+| `total_dispositivos` | Suma de unidades entregadas |
+| `total_kg` | Peso total en kg entregado |
+| `ultima_entrega` | Fecha de la entrega más reciente |
+
+---
+
+### Relaciones entre tablas
+
+```
+usuarios ──────────────────────────────┐
+    │ 1                                │ 1
+    │ N                                │ N
+dispositivos ──── 1 ──── entregas ──── N ──── puntos_recoleccion
+                              │
+                              │ genera
+                              ↓
+                     bloques_blockchain
+
+recompensas (tabla independiente — se consulta según puntos del usuario)
+```
+
+- Un **usuario** puede registrar muchos **dispositivos** (1:N).
+- Un **usuario** puede hacer muchas **entregas** (1:N).
+- Un **dispositivo** tiene como máximo **una entrega** (1:1).
+- Un **punto de recolección** recibe muchas **entregas** (1:N).
+- Cada **entrega** genera automáticamente un **bloque** en la blockchain.
+- Las **recompensas** se consultan en función de los `puntos_acumulados` del usuario.
+
+---
+
+### Índices de rendimiento
+
+| Índice | Tabla | Columna | Propósito |
+|---|---|---|---|
+| `idx_puntos_ciudad` | `puntos_recoleccion` | `ciudad` | Búsquedas rápidas por ciudad *(aporte compañero)* |
+| `idx_entregas_usuario` | `entregas` | `usuario_id` | Historial de entregas por usuario *(aporte compañero)* |
+| `idx_entregas_punto` | `entregas` | `punto_recoleccion_id` | Actividad por punto *(aporte compañero)* |
+| `idx_entregas_fecha` | `entregas` | `fecha_entrega` | Consultas de tendencia temporal *(aporte compañero)* |
+| `idx_blockchain_indice` | `bloques_blockchain` | `indice` | Reconstrucción ordenada de la cadena |
+| `idx_blockchain_hash` | `bloques_blockchain` | `hash_actual` | Búsqueda de bloque por hash |
+
+---
+
+### Cómo funciona la BD dentro del proyecto
+
+#### 1. Inicialización (ORM → MySQL)
+Los modelos SQLAlchemy en `app/models/` son la **fuente de verdad** del esquema. El archivo `ecosystem_mysql.sql` es una representación SQL de esos modelos, lista para importar directamente en MySQL sin necesidad de correr migraciones.
+
+#### 2. Configuración por entorno (`config.py`)
+```python
+class DevelopmentConfig(Config):
+    SQLALCHEMY_DATABASE_URI = os.getenv(
+        'DATABASE_URL',
+        'mysql+pymysql://root:password@localhost:3306/ecosystem_db'
+    )
+
+class TestingConfig(Config):
+    # Tests usan SQLite en memoria — no requieren MySQL
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
+
+class ProductionConfig(Config):
+    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL')  # Variable del servidor
+```
+
+#### 3. Flujo de una operación de BD (patrón DAO)
+Ningún controlador hace consultas directas. Todo pasa por la capa DAO:
+
+```
+[Formulario WTForms]  →  POST HTTP
+        ↓
+[Controller]  →  construye un DTO con los datos del formulario
+        ↓
+[DTO]  →  objeto simple sin lógica (solo transporta datos)
+        ↓
+[DAO]  →  recibe el DTO, construye el modelo ORM y llama a db.session
+        ↓
+[SQLAlchemy]  →  genera el SQL y lo ejecuta en MySQL
+        ↓
+[MySQL 8.x]  →  persiste el dato en la tabla correspondiente
+```
+
+#### 4. Persistencia de la blockchain
+La `CadenaBloques` (Singleton en memoria) se reconstruye desde la tabla `bloques_blockchain` cada vez que el servidor se reinicia:
+
+```python
+# blockchain_controller.py
+cadena = CadenaBloques.obtener_instancia()
+if len(cadena.cadena) <= 1 and bloques_bd:
+    cadena.sincronizar_desde_bd(bloques_bd)  # Reconstruye desde MySQL
+```
+
+#### 5. Gamificación y puntos
+Cuando se registra una entrega, el flujo completo que involucra la BD es:
+
+```
+1. EntregaDAO.crear(dto)                           → INSERT en entregas
+2. GamificacionService.calcular_puntos(categoria)  → lógica en memoria
+3. UsuarioDAO.sumar_puntos(usuario_id, puntos)     → UPDATE en usuarios
+4. CadenaBloques.agregar_bloque(datos)             → genera hash en memoria
+5. BloqueDAO.guardar_bloque(bloque)                → INSERT en bloques_blockchain
+6. EntregaDAO.actualizar_hash_blockchain(id, hash) → UPDATE en entregas
+```
+
+---
+
 ## 👥 Roles de usuario
 
-| Rol        | Descripción                                              |
-|------------|----------------------------------------------------------|
-| Ciudadano  | Registra dispositivos y hace entregas. Gana puntos.      |
-| Empresa    | Gestiona puntos de recolección. Hace entregas.           |
-| Gobierno   | Accede al dashboard estadístico. Administra el sistema.  |
+| Rol | Descripción |
+|---|---|
+| Ciudadano | Registra dispositivos y hace entregas. Gana puntos. |
+| Empresa | Gestiona puntos de recolección. Hace entregas. |
+| Gobierno | Accede al dashboard estadístico. Administra el sistema. |
 
 ---
 
@@ -119,14 +415,16 @@ Cada entrega genera un bloque con hash SHA-256 que encadena todos los registros.
 
 ## 🏆 Sistema de puntos
 
-| Dispositivo      | Puntos |
-|------------------|--------|
-| Computador       | 100    |
-| Electrodoméstico | 80     |
-| Celular          | 50     |
-| Tarjeta madre    | 40     |
-| Batería          | 30     |
-| Otro             | 20     |
+| Dispositivo | Puntos |
+|---|---|
+| Computador | 100 |
+| Electrodoméstico | 80 |
+| Celular | 50 |
+| Tarjeta madre | 40 |
+| Batería | 30 |
+| Tablet | 30 |
+| Impresora | 20 |
+| Otro | 20 |
 
 ---
 
@@ -168,8 +466,8 @@ EcoSystem implementa múltiples patrones de diseño que se complementan para log
 [DAO] — app/dao/dispositivo_dao.py
     ↓  Opera sobre el modelo ORM
 [Model] — app/models/dispositivo.py
-    ↓  SQLAlchemy ↔ SQLite/MySQL
-[Base de Datos]
+    ↓  SQLAlchemy ↔ MySQL
+[Base de Datos MySQL]
     ↑  Datos
 [Controller]
     ↓  render_template(...)
@@ -186,8 +484,8 @@ app/
 │   ├── usuario.py               ← Entidad Usuario (tabla usuarios)
 │   ├── dispositivo.py           ← Entidad Dispositivo (tabla dispositivos)
 │   ├── entrega.py               ← Entidad Entrega (tabla entregas)
-│   ├── punto_recoleccion.py     ← Entidad PuntoRecoleccion
-│   ├── recompensa.py            ← Entidad Recompensa
+│   ├── punto_recoleccion.py     ← Entidad PuntoRecoleccion (tabla puntos_recoleccion)
+│   ├── recompensa.py            ← Entidad Recompensa (tabla recompensas)
 │   └── bloque.py                ← Entidad Bloque (tabla bloques_blockchain)
 ├── controllers/
 │   ├── auth_controller.py       ← Rutas: /auth/login, /auth/registro, /auth/logout
@@ -231,30 +529,15 @@ app/
 
 **¿Cómo se aplica?** La función `create_app()` es la fábrica que construye y configura la instancia de Flask según el entorno (`development`, `testing`, `production`). Esto permite que los tests usen una configuración diferente a producción sin cambiar el código fuente.
 
-```
-# app/__init__.py — línea 21
+```python
 def create_app(entorno='development'):
-    """Crea y configura la aplicación Flask (Factory Pattern)."""
     app = Flask(__name__, template_folder='views', static_folder='static')
-
-    # Carga la config según el entorno: DevelopmentConfig, TestingConfig o ProductionConfig
     app.config.from_object(configuraciones.get(entorno, configuraciones['default']))
-
-    # Inicializa extensiones SIN la app al principio (soporte al Factory)
     db.init_app(app)
     migrate.init_app(app, db)
-    csrf.init_app(app)
-    login_manager.init_app(app)
-
-    # Registra todos los Blueprints (controladores)
-    app.register_blueprint(auth_bp)
-    app.register_blueprint(dispositivo_bp)
-    # ... etc.
-
-    return app  # Retorna la instancia totalmente configurada
+    # ...
+    return app
 ```
-
-**Beneficio concreto:** Los tests llaman `create_app('testing')` y obtienen la app con SQLite en memoria. En producción se llama `create_app('production')` y apunta a MySQL. El mismo código funciona para ambos.
 
 ---
 
@@ -262,149 +545,60 @@ def create_app(entorno='development'):
 
 **📄 Archivo:** `app/services/blockchain_service.py`
 
-**¿Qué es?** El patrón Singleton garantiza que una clase tenga **una única instancia** durante toda la vida del programa, y provee un punto de acceso global a ella.
+La cadena de bloques debe ser **una sola** en toda la aplicación. El Singleton garantiza que `CadenaBloques.obtener_instancia()` siempre retorne la misma instancia, sin importar cuántas peticiones HTTP se procesen simultáneamente.
 
-**¿Por qué se usa aquí?** La cadena de bloques debe ser **una sola** en toda la aplicación. Si cada petición HTTP creara su propia instancia de `CadenaBloques`, cada usuario vería una cadena diferente y los bloques no estarían encadenados correctamente.
-
-```
-# app/services/blockchain_service.py — línea 79
+```python
 class CadenaBloques:
-    """Cadena de bloques simulada — implementa el patrón Singleton."""
-
-    _instancia = None  # ← Atributo de clase: guarda la única instancia
+    _instancia = None
 
     @classmethod
     def obtener_instancia(cls):
-        """
-        Retorna la única instancia de CadenaBloques.
-        Si no existe, la crea. Si ya existe, la retorna directamente.
-        """
         if cls._instancia is None:
-            cls._instancia = cls()   # Primera y única creación
-        return cls._instancia        # Siempre retorna la misma instancia
-```
-
-**Uso en el controlador de entregas:**
-```
-# app/controllers/entrega_controller.py — línea 108
-cadena = CadenaBloques.obtener_instancia()   # Obtiene LA instancia (no crea una nueva)
-bloque = cadena.agregar_bloque(datos_bloque)  # Agrega a la cadena compartida
+            cls._instancia = cls()
+        return cls._instancia
 ```
 
 ---
 
 ### 4. Patrón de Diseño — DAO (Data Access Object)
 
-**📄 Archivos:** `app/dao/usuario_dao.py`, `app/dao/dispositivo_dao.py`, `app/dao/entrega_dao.py`, `app/dao/punto_recoleccion_dao.py`, `app/dao/recompensa_dao.py`, `app/dao/bloque_dao.py`
+**📄 Archivos:** `app/dao/*.py`
 
-**¿Qué es?** El patrón DAO abstrae y encapsula todo el acceso a la fuente de datos (base de datos). Cada entidad tiene su propio DAO con los métodos CRUD y consultas específicas.
-
-**Beneficio principal:** Si mañana se cambia SQLite por PostgreSQL, o SQLAlchemy por otro ORM, solo se modifican los DAOs. Los controladores no necesitan cambiar.
+Cada entidad tiene su propio DAO con los métodos CRUD y consultas específicas. Los controladores **nunca** escriben `db.session.query(...)` directamente.
 
 ```python
-# app/dao/dispositivo_dao.py — estructura completa
 class DispositivoDAO:
     @staticmethod
-    def crear(dto): ...           # INSERT
+    def crear(dto): ...
     @staticmethod
-    def obtener_por_id(id): ...   # SELECT WHERE id = ?
+    def obtener_por_id(id): ...
     @staticmethod
-    def obtener_todos(): ...      # SELECT ALL
+    def obtener_todos(): ...
     @staticmethod
-    def obtener_por_usuario(usuario_id): ...   # SELECT WHERE usuario_id = ?
+    def actualizar(id, dto): ...
     @staticmethod
-    def obtener_sin_entrega(usuario_id): ...   # SELECT con subquery NOT EXISTS
-    @staticmethod
-    def actualizar(id, dto): ...  # UPDATE
-    @staticmethod
-    def eliminar(id): ...         # DELETE físico
+    def eliminar(id): ...
 ```
-
-**Regla estricta aplicada:** Ningún controlador tiene una sola línea de `db.session.query(...)` directa. Todo pasa por el DAO correspondiente.
 
 ---
 
 ### 5. Patrón de Diseño — DTO (Data Transfer Object)
 
-**📄 Archivos:** `app/dto/usuario_dto.py`, `app/dto/dispositivo_dto.py`, `app/dto/entrega_dto.py`
+**📄 Archivos:** `app/dto/*.py`
 
-**¿Qué es?** El patrón DTO define objetos simples (sin lógica) cuya única función es transportar datos entre capas (del formulario → al controlador → al DAO), sin exponer directamente los modelos ORM.
-
-```python
-# app/dto/dispositivo_dto.py
-class DispositivoDTO:
-    def __init__(self, nombre, categoria, estado, usuario_id,
-                 marca=None, peso_kg=None, descripcion=None):
-        self.nombre = nombre
-        self.categoria = categoria
-        self.estado = estado
-        self.usuario_id = usuario_id
-        self.marca = marca
-        self.peso_kg = peso_kg
-        self.descripcion = descripcion
-
-    @staticmethod
-    def desde_modelo(dispositivo):
-        """Convierte un objeto ORM a DTO (sentido inverso)."""
-        ...
-```
-
-**Flujo concreto en registro de dispositivo:**
-```
-FormularioDispositivo (WTForms)
-    ↓  datos del POST
-DispositivoDTO(nombre=..., categoria=..., estado=..., usuario_id=...)
-    ↓  DTO pasado al DAO
-DispositivoDAO.crear(dto)
-    ↓  DAO construye el modelo
-Dispositivo(nombre=dto.nombre, ...)  →  db.session.add()  →  BD
-```
+Objetos simples que transportan datos entre capas (formulario → controlador → DAO) sin exponer los modelos ORM directamente.
 
 ---
 
-### 6. Patrón de Diseño — Decorator (para control de acceso por roles)
+### 6. Patrón de Diseño — Decorator (control de acceso por roles)
 
 **📄 Archivo:** `app/controllers/decoradores.py`
 
-**¿Qué es?** El patrón Decorator añade comportamiento a una función existente sin modificarla, envolviéndola en otra función. En Python se implementa con `@functools.wraps`.
-
-**¿Cómo se aplica?** El decorador `@requiere_rol(...)` protege las rutas verificando el tipo de usuario antes de ejecutar la función de vista. Si el usuario no tiene el rol requerido, recibe un error 403.
-
-```
-# app/controllers/decoradores.py
-def requiere_rol(*roles):
-    """Decorador que restringe el acceso según el tipo de usuario."""
-    def decorador(f):
-        @wraps(f)
-        def funcion_decorada(*args, **kwargs):
-            if not current_user.is_authenticated:
-                return redirect(url_for('auth.login'))
-            if current_user.tipo_usuario not in roles:
-                abort(403)          # Acceso denegado
-            return f(*args, **kwargs)   # Ejecuta la vista original
-        return funcion_decorada
-    return decorador
-```
-
-**Uso en los controladores:**
-```
-# Solo empresa y gobierno pueden crear puntos de recolección
+```python
 @punto_recoleccion_bp.route('/nuevo', methods=['GET', 'POST'])
 @login_required
-@requiere_rol('empresa', 'gobierno')   # ← Decorator en acción
+@requiere_rol('empresa', 'gobierno')   # Solo empresa y gobierno pueden crear puntos
 def nuevo(): ...
-
-# Solo gobierno puede ver el dashboard
-@dashboard_bp.route('/')
-@login_required
-@requiere_rol('gobierno')              # ← Decorator en acción
-def index(): ...
-
-# Solo gobierno puede eliminar usuarios
-@usuario_bp.route('/<int:usuario_id>/eliminar', methods=['POST'])
-@login_required
-@requiere_rol('gobierno')              # ← Decorator en acción
-def eliminar(usuario_id): ...
 ```
 
 ---
@@ -436,7 +630,7 @@ El encapsulamiento agrupa datos y los métodos que los manipulan en una misma cl
 
 El atributo `password_hash` nunca se expone directamente. Para interactuar con la contraseña se usan exclusivamente los métodos `establecer_password()` y `verificar_password()`, que encapsulan el proceso de hashing con Werkzeug.
 
-```
+```python
 class Usuario(UserMixin, db.Model):
     password_hash = db.Column(db.String(256), nullable=False)  # Nunca accedido directamente
 
@@ -453,7 +647,7 @@ class Usuario(UserMixin, db.Model):
 
 Todas las consultas SQL están encapsuladas dentro de la clase `UsuarioDAO`. Los controladores nunca escriben queries directamente; solo llaman a los métodos del DAO.
 
-```
+```python
 class UsuarioDAO:
     @staticmethod
     def obtener_por_email(email):
@@ -471,7 +665,7 @@ class UsuarioDAO:
 
 El cálculo del hash SHA-256 está encapsulado en el método `calcular_hash()` de la clase `Bloque`. Ningún código externo replica esa lógica.
 
-```
+```python
 class Bloque:
     def calcular_hash(self):
         contenido = json.dumps({
@@ -507,11 +701,9 @@ class Usuario(UserMixin, db.Model):
     ...
 ```
 
-**📄 `app/models/dispositivo.py`, `entrega.py`, `punto_recoleccion.py`, `recompensa.py`, `bloque.py`**
+**📄 Todos los modelos heredan de `db.Model`**
 
-Todos los modelos de la aplicación heredan de `db.Model`, lo que les proporciona la capacidad de mapearse a tablas de la base de datos, usar el sistema de sesiones y definir relaciones entre entidades.
-
-```
+```python
 class Dispositivo(db.Model): ...       # app/models/dispositivo.py
 class Entrega(db.Model): ...           # app/models/entrega.py
 class PuntoRecoleccion(db.Model): ...  # app/models/punto_recoleccion.py
@@ -523,31 +715,31 @@ class Bloque(db.Model): ...            # app/models/bloque.py
 
 Las clases de configuración forman una jerarquía de herencia. `Config` es la clase base con los atributos comunes, y cada entorno la especializa sobrescribiendo solo lo necesario.
 
-```
-class Config:                    # Clase base — atributos compartidos
+```python
+class Config:                     # Clase base — atributos compartidos
     SECRET_KEY = ...
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     WTF_CSRF_ENABLED = True
 
-class DevelopmentConfig(Config): # Hereda Config, agrega DEBUG y SQLite
+class DevelopmentConfig(Config):  # Hereda Config, agrega DEBUG y MySQL local
     DEBUG = True
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///ecosystem_dev.db'
+    SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://root:password@localhost:3306/ecosystem_db'
 
-class TestingConfig(Config):     # Hereda Config, agrega TESTING y SQLite en memoria
+class TestingConfig(Config):      # Hereda Config, agrega TESTING y SQLite en memoria
     TESTING = True
     SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
     WTF_CSRF_ENABLED = False
 
-class ProductionConfig(Config):  # Hereda Config, apunta a MySQL en producción
+class ProductionConfig(Config):   # Hereda Config, apunta a MySQL en producción
     DEBUG = False
     SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL')
 ```
 
-**📄 `app/controllers/*.py` — Formularios WTForms con herencia**
+**📄 Formularios WTForms con herencia**
 
 Todos los formularios de la aplicación heredan de `FlaskForm`, que les provee validación CSRF, el método `validate_on_submit()` y la integración con Jinja2.
 
-```
+```python
 class FormularioDispositivo(FlaskForm): ...     # dispositivo_controller.py
 class FormularioEntrega(FlaskForm): ...         # entrega_controller.py
 class FormularioPunto(FlaskForm): ...           # punto_recoleccion_controller.py
@@ -561,13 +753,13 @@ class FormularioUsuario(FlaskForm): ...         # usuario_controller.py
 
 ### 3. Polimorfismo
 
-El polimorfismo permite que distintos objetos respondan al mismo mensaje (método) de formas diferentes. En Python se expresa mediante duck typing y métodos especiales como `__repr__`.
+El polimorfismo permite que distintos objetos respondan al mismo mensaje (método) de formas diferentes.
 
 **📄 Todos los modelos — Método `__repr__` polimórfico**
 
-Cada modelo implementa `__repr__` con su propia representación. Cuando Python necesita mostrar cualquier objeto de la aplicación (en logs, debugger o consola), llama a `__repr__` sin importar de qué clase concreta se trate.
+Cada modelo implementa `__repr__` con su propia representación. Cuando Python necesita mostrar cualquier objeto (en logs, debugger o consola), llama a `__repr__` sin importar de qué clase concreta se trate.
 
-```
+```python
 # app/models/usuario.py
 def __repr__(self):
     return f'<Usuario {self.nombre} ({self.tipo_usuario})>'
@@ -615,10 +807,10 @@ def puede_gestionar_puntos(self):
 
 Cada DTO implementa `desde_modelo()` adaptado a su propia entidad, pero todos siguen la misma interfaz (reciben un modelo y retornan un DTO).
 
-```
+```python
 # app/dto/usuario_dto.py
 @staticmethod
-def desde_modelo(usuario): ...   # Convierte Usuario → UsuarioDTO
+def desde_modelo(usuario): ...     # Convierte Usuario → UsuarioDTO
 
 # app/dto/dispositivo_dto.py
 @staticmethod
@@ -626,7 +818,7 @@ def desde_modelo(dispositivo): ... # Convierte Dispositivo → DispositivoDTO
 
 # app/dto/entrega_dto.py
 @staticmethod
-def desde_modelo(entrega): ...   # Convierte Entrega → EntregaDTO
+def desde_modelo(entrega): ...     # Convierte Entrega → EntregaDTO
 ```
 
 ---
@@ -639,7 +831,7 @@ La abstracción oculta los detalles de implementación y expone solo lo esencial
 
 Los controladores no saben cómo se calcula un hash SHA-256, cómo se estructura el JSON del bloque ni cómo funciona el encadenamiento. Solo llaman a `agregar_bloque(datos)` y reciben el bloque resultante.
 
-```
+```python
 # Lo que ve el controlador (interfaz abstracta):
 cadena = CadenaBloques.obtener_instancia()
 bloque = cadena.agregar_bloque(datos_entrega)  # "Agrega esto a la cadena"
@@ -656,11 +848,10 @@ es_valida = cadena.es_cadena_valida()          # "¿La cadena es íntegra?"
 
 Los controladores no conocen la tabla de puntos por categoría. Solo llaman a `calcular_puntos(categoria)` y reciben el resultado.
 
-```
+```python
 # Lo que ve el controlador:
 puntos = GamificacionService.calcular_puntos(dispositivo.categoria)
 nivel_info = GamificacionService.determinar_nivel(current_user.puntos_acumulados)
-puntos_faltantes = GamificacionService.puntos_para_siguiente_nivel(puntos_acumulados)
 
 # Lo que hace internamente (oculto en el servicio):
 PUNTOS_POR_CATEGORIA = {
@@ -673,7 +864,7 @@ PUNTOS_POR_CATEGORIA = {
 
 Los controladores no escriben SQL ni conocen el esquema de la base de datos. Delegan completamente en los DAOs, que abstraen esa complejidad.
 
-```
+```python
 # Lo que ve el controlador (interfaz abstracta):
 dispositivos = DispositivoDAO.obtener_sin_entrega(current_user.id)
 puntos = PuntoRecoleccionDAO.obtener_todos()
@@ -697,7 +888,7 @@ return Dispositivo.query.filter_by(usuario_id=usuario_id).filter(
 
 ---
 
-## 🔄 Implementación de CRUD
+## 🔄 CRUD por entidad
 
 Cada entidad principal del sistema tiene sus cuatro operaciones CRUD implementadas de forma completa: en el **Modelo** (estructura), el **DAO** (acceso a datos), el **Controlador** (rutas HTTP) y la **Vista** (formularios HTML).
 
@@ -765,7 +956,7 @@ Cada entidad principal del sistema tiene sus cuatro operaciones CRUD implementad
 2. Calcular los puntos según la categoría del dispositivo (GamificacionService)
 3. Guardar la entrega en BD (EntregaDAO.crear)
 4. Sumar puntos al usuario (UsuarioDAO.sumar_puntos)
-5. Agregar bloque a la cadena (CadenaBloques.agregar_bloque)
+5. Agregar el bloque a la cadena de bloques (CadenaBloques.agregar_bloque)
 6. Persistir el bloque en BD (BloqueDAO.guardar_bloque)
 7. Guardar el hash del bloque en la entrega (EntregaDAO.actualizar_hash_blockchain)
 ```
@@ -777,6 +968,7 @@ Cada entidad principal del sistema tiene sus cuatro operaciones CRUD implementad
 - `EntregaDAO.contar_por_categoria()` → datos para el dashboard
 - `EntregaDAO.contar_por_ciudad()` → datos para el dashboard
 - `EntregaDAO.tendencia_mensual()` → datos para gráfica de tendencia
+- `EntregaDAO.resumen_por_usuario()` → equivalente ORM de la vista `resumen_usuario_entregas`
 
 ---
 
@@ -789,7 +981,7 @@ Cada entidad principal del sistema tiene sus cuatro operaciones CRUD implementad
 | **Create** | `PuntoRecoleccionDAO.crear(...)` | `POST /puntos-recoleccion/nuevo` | `punto_recoleccion_controller.py` | Crea un nuevo centro de acopio (solo empresa/gobierno) |
 | **Read (uno)** | `PuntoRecoleccionDAO.obtener_por_id(id)` | `GET /puntos-recoleccion/<id>` | `punto_recoleccion_controller.py` | Ver detalle del punto |
 | **Read (todos)** | `PuntoRecoleccionDAO.obtener_todos()` | `GET /puntos-recoleccion/` | `punto_recoleccion_controller.py` | Listar todos los puntos activos |
-| **Update** | `PuntoRecoleccionDAO.actualizar(id, ...)` | `POST /puntos-recoleccion/<id>/editar` | `punto_recoleccion_controller.py` | Editar nombre, dirección, horario, etc. |
+| **Update** | `PuntoRecoleccionDAO.actualizar(id, ...)` | `POST /puntos-recoleccion/<id>/editar` | `punto_recoleccion_controller.py` | Editar nombre, dirección, horario, entidad, etc. |
 | **Delete** | `PuntoRecoleccionDAO.eliminar(id)` | `POST /puntos-recoleccion/<id>/eliminar` | `punto_recoleccion_controller.py` | Desactivación lógica (`activo = False`) |
 
 **Control de permisos:** Solo usuarios con rol `empresa` o `gobierno` pueden crear, editar y eliminar puntos.
@@ -809,7 +1001,7 @@ Cada entidad principal del sistema tiene sus cuatro operaciones CRUD implementad
 | **Delete** | `RecompensaDAO.eliminar(id)` | `POST /recompensas/<id>/eliminar` | `recompensa_controller.py` | Desactivación lógica (`activo = False`) |
 
 **Método adicional del DAO:**
-- `RecompensaDAO.obtener_disponibles_para_usuario(puntos)` → filtra recompensas cuyo costo ≤ puntos del usuario (integrado con `GamificacionService`)
+- `RecompensaDAO.obtener_disponibles_para_usuario(puntos)` → filtra recompensas cuyo costo ≤ puntos del usuario
 
 ---
 
@@ -839,3 +1031,15 @@ Cada entidad principal del sistema tiene sus cuatro operaciones CRUD implementad
 | **Recompensa** | ✅ | ✅ | ✅ | ✅ (lógico) | `recompensa_dao.py` + `recompensa_controller.py` |
 | **Bloque** | ✅ | ✅ | ❌ (inmutable) | ❌ (inmutable) | `bloque_dao.py` + `blockchain_controller.py` |
 
+---
+
+## 🔐 Roles y Permisos
+
+| Funcionalidad | Ciudadano | Empresa | Gobierno |
+|---|:---:|:---:|:---:|
+| Registrar dispositivos | ✅ | ✅ | ❌ |
+| Hacer entregas | ✅ | ✅ | ❌ |
+| Ver puntos y recompensas | ✅ | ✅ | ❌ |
+| Gestionar puntos de recolección | ❌ | ✅ | ✅ |
+| Ver dashboard estadístico | ❌ | ❌ | ✅ |
+| Verificar blockchain | ✅ | ✅ | ✅ |

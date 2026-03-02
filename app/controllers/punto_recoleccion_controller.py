@@ -6,7 +6,7 @@ Gestiona el CRUD de centros de acopio (solo empresa y gobierno pueden administra
 from flask import Blueprint, render_template, redirect, url_for, flash
 from flask_login import login_required
 from flask_wtf import FlaskForm
-from wtforms import StringField, DecimalField, TextAreaField, SubmitField
+from wtforms import StringField, DecimalField, SubmitField
 from wtforms.validators import DataRequired, Length, Optional
 
 from app.dao.punto_recoleccion_dao import PuntoRecoleccionDAO
@@ -23,6 +23,9 @@ class FormularioPunto(FlaskForm):
     horario = StringField('Horario de atención', validators=[Optional(), Length(max=200)])
     tipos_aceptados = StringField('Tipos aceptados (separados por coma)',
                                   validators=[Optional(), Length(max=255)])
+    # Campo integrado del aporte del compañero
+    entidad = StringField('Entidad responsable (Alcaldía, ONG, empresa...)',
+                          validators=[Optional(), Length(max=120)])
     latitud = DecimalField('Latitud', validators=[Optional()], places=8)
     longitud = DecimalField('Longitud', validators=[Optional()], places=8)
     submit = SubmitField('Guardar punto')
@@ -52,7 +55,8 @@ def nuevo():
             latitud=formulario.latitud.data,
             longitud=formulario.longitud.data,
             horario=formulario.horario.data,
-            tipos_aceptados=formulario.tipos_aceptados.data
+            tipos_aceptados=formulario.tipos_aceptados.data,
+            entidad=formulario.entidad.data
         )
         flash('Punto de recolección creado correctamente.', 'success')
         return redirect(url_for('punto_recoleccion.listar'))
@@ -94,7 +98,8 @@ def editar(punto_id):
             latitud=formulario.latitud.data,
             longitud=formulario.longitud.data,
             horario=formulario.horario.data,
-            tipos_aceptados=formulario.tipos_aceptados.data
+            tipos_aceptados=formulario.tipos_aceptados.data,
+            entidad=formulario.entidad.data
         )
         flash('Punto de recolección actualizado correctamente.', 'success')
         return redirect(url_for('punto_recoleccion.detalle', punto_id=punto_id))

@@ -25,12 +25,16 @@ class FormularioDispositivo(FlaskForm):
                                      ('bateria', 'Batería'),
                                      ('electrodomestico', 'Electrodoméstico'),
                                      ('tarjeta_madre', 'Tarjeta Madre'),
+                                     ('tablet', 'Tablet'),
+                                     ('impresora', 'Impresora'),
                                      ('otro', 'Otro')])
     marca = StringField('Marca', validators=[Optional(), Length(max=100)])
     estado = SelectField('Estado',
-                         choices=[('funcional', 'Funcional'),
+                         choices=[('nuevo', 'Nuevo'),
+                                  ('funcional', 'Funcional'),
                                   ('dañado', 'Dañado'),
-                                  ('obsoleto', 'Obsoleto')])
+                                  ('obsoleto', 'Obsoleto'),
+                                  ('irreparable', 'Irreparable')])
     peso_kg = DecimalField('Peso (kg)', validators=[Optional()], places=2)
     descripcion = TextAreaField('Descripción', validators=[Optional(), Length(max=500)])
     submit = SubmitField('Guardar dispositivo')

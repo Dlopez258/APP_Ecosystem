@@ -3,6 +3,7 @@ Modelo de Punto de Recolección para la base de datos.
 Representa los centros de acopio donde los ciudadanos entregan sus dispositivos.
 """
 
+from datetime import datetime, timezone
 from app import db
 
 
@@ -25,6 +26,9 @@ class PuntoRecoleccion(db.Model):
     horario = db.Column(db.String(200))
     # Categorías de dispositivos que acepta este punto, separadas por coma
     tipos_aceptados = db.Column(db.String(255))
+    # Campos integrados del aporte del compañero de equipo
+    entidad = db.Column(db.String(120))
+    fecha_creacion = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     activo = db.Column(db.Boolean, default=True)
 
     # Relación: un punto puede recibir muchas entregas

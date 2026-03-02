@@ -8,7 +8,6 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_login import LoginManager
 from flask_wtf.csrf import CSRFProtect
-
 from config import configuraciones
 
 # Instancias de extensiones (se inicializan sin app para soportar el factory pattern)
@@ -17,18 +16,10 @@ migrate = Migrate()
 login_manager = LoginManager()
 csrf = CSRFProtect()
 
-
+#Creación y configuración de la aplicación Flask
+#Argumento: entorno: Permite cargar la configuración adecuada según el entorno (desarrollo, pruebas, producción).
+#Retorna: Instancia de la aplicación Flask configurada y lista para usar.
 def create_app(entorno='development'):
-    """
-    Crea y configura la aplicación Flask (Factory Pattern).
-
-    Args:
-        entorno (str): Nombre del entorno de configuración
-                       ('development', 'testing', 'production').
-
-    Returns:
-        Flask: Instancia de la aplicación configurada.
-    """
     app = Flask(
         __name__,
         template_folder='views',   # Las vistas están en app/views/
@@ -84,14 +75,8 @@ def create_app(entorno='development'):
 
     return app
 
-
+# Registro de errores 404 y 500
 def registrar_errores(app):
-    """
-    Registra las páginas de error personalizadas (404 y 500).
-
-    Args:
-        app (Flask): Instancia de la aplicación Flask.
-    """
     from flask import render_template
 
     @app.errorhandler(404)
@@ -105,6 +90,4 @@ def registrar_errores(app):
     @app.errorhandler(500)
     def error_interno(error):
         return render_template('errores/500.html'), 500
-
-
 

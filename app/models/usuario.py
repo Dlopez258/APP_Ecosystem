@@ -3,7 +3,7 @@ Modelo de Usuario para la base de datos.
 Representa a los ciudadanos, empresas y gobiernos que usan EcoSystem.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -36,7 +36,10 @@ class Usuario(UserMixin, db.Model):
     )
     puntos_acumulados = db.Column(db.Integer, default=0)
     ciudad = db.Column(db.String(100))
-    fecha_registro = db.Column(db.DateTime, default=datetime.utcnow)
+    # Campos integrados del aporte del compañero de equipo
+    telefono = db.Column(db.String(20))
+    barrio = db.Column(db.String(100))
+    fecha_registro = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     activo = db.Column(db.Boolean, default=True)
 
     # Relaciones: un usuario puede tener muchos dispositivos y muchas entregas
