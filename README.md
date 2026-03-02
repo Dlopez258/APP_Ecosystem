@@ -120,6 +120,226 @@ Eje2_ArquitecturaSoftware/
 ```
 
 ---
+## 👥 Roles de usuario
+
+| Rol | Descripción |
+|---|---|
+| Ciudadano | Registra dispositivos y hace entregas. Gana puntos. |
+| Empresa | Gestiona puntos de recolección. Hace entregas. |
+| Gobierno | Accede al dashboard estadístico. Administra el sistema. |
+
+---
+
+## ⛓️ Blockchain simulado
+
+Cada entrega genera un bloque con hash SHA-256 que encadena todos los registros. Se puede explorar y verificar la integridad en `/blockchain`.
+
+---
+
+## 🏆 Sistema de puntos
+
+| Dispositivo | Puntos |
+|---|---|
+| Computador | 100 |
+| Electrodoméstico | 80 |
+| Celular | 50 |
+| Tarjeta madre | 40 |
+| Batería | 30 |
+| Tablet | 30 |
+| Impresora | 20 |
+| Otro | 20 |
+
+---
+
+## 🏛️ Patrones de Diseño y Estilos Arquitectónicos
+
+EcoSystem implementa múltiples patrones de diseño que se complementan para lograr un código mantenible, desacoplado y escalable.
+
+---
+
+### 1. Estilo Arquitectónico — MVC (Model-View-Controller)
+
+**¿Qué es?** El estilo MVC divide la aplicación en tres capas con responsabilidades claramente separadas: los datos (Model), la presentación (View) y la lógica de control (Controller).
+
+**¿Cómo se aplica en EcoSystem?**
+
+| Capa | Carpeta | Responsabilidad |
+|---|---|---|
+| **Model** | `app/models/` | Define las entidades de la base de datos con SQLAlchemy. No contiene lógica de negocio ni HTTP. |
+| **View** | `app/views/` | Templates Jinja2 con HTML y Bootstrap 5. Solo presentación, sin lógica Python compleja. |
+| **Controller** | `app/controllers/` | Recibe peticiones HTTP, invoca DAOs/Services y retorna respuestas (`render_template` o `redirect`). |
+
+**Extensiones del MVC implementadas:**
+
+| Capa adicional | Carpeta | Rol en la arquitectura |
+|---|---|---|
+| **DAO** (Data Access Object) | `app/dao/` | Encapsula todas las queries a la base de datos. Los controladores **nunca** hacen queries directas. |
+| **DTO** (Data Transfer Object) | `app/dto/` | Objetos simples para mover datos entre capas sin acoplarlas al modelo ORM. |
+| **Services** | `app/services/` | Lógica de negocio compleja independiente de un controlador (blockchain, gamificación). |
+
+**Diagrama del flujo de una petición:**
+
+```
+[Navegador]
+    ↓  HTTP Request
+[Controller] — app/controllers/dispositivo_controller.py
+    ↓  Usa DTO para encapsular datos
+[DTO] — app/dto/dispositivo_dto.py
+    ↓  Delega operación de BD
+[DAO] — app/dao/dispositivo_dao.py
+    ↓  Opera sobre el modelo ORM
+[Model] — app/models/dispositivo.py
+    ↓  SQLAlchemy ↔ MySQL
+[Base de Datos MySQL]
+    ↑  Datos
+[Controller]
+    ↓  render_template(...)
+[View] — app/views/dispositivo/listar.html
+    ↑  HTML renderizado
+[Navegador]
+```
+
+**Archivos clave del MVC:**
+
+```
+app/
+├── models/
+│   ├── usuario.py               ← Entidad Usuario (tabla usuarios)
+│   ├── dispositivo.py           ← Entidad Dispositivo (tabla dispositivos)
+│   ├── entrega.py               ← Entidad Entrega (tabla entregas)
+│   ├── punto_recoleccion.py     ← Entidad PuntoRecoleccion (tabla puntos_recoleccion)
+│   ├── recompensa.py            ← Entidad Recompensa (tabla recompensas)
+│   └── bloque.py                ← Entidad Bloque (tabla bloques_blockchain)
+├── controllers/
+│   ├── auth_controller.py       ← Rutas: /auth/login, /auth/registro, /auth/logout
+│   ├── usuario_controller.py    ← Rutas: /usuarios/
+│   ├── dispositivo_controller.py← Rutas: /dispositivos/
+│   ├── entrega_controller.py    ← Rutas: /entregas/
+│   ├── punto_recoleccion_controller.py ← Rutas: /puntos-recoleccion/
+│   ├── recompensa_controller.py ← Rutas: /recompensas/
+│   ├── blockchain_controller.py ← Rutas: /blockchain/
+│   └── dashboard_controller.py  ← Rutas: /dashboard/ (solo gobierno)
+├── views/
+│   ├── layout/base.html         ← Template base con navbar y footer
+│   ├── auth/                    ← login.html, registro.html
+│   ├── dispositivo/             ← listar.html, formulario.html, detalle.html
+│   ├── entrega/                 ← listar.html, formulario.html, detalle.html
+│   ├── punto_recoleccion/       ← listar.html, formulario.html, detalle.html
+│   ├── recompensa/              ← listar.html, formulario.html
+│   ├── blockchain/              ← explorar.html, detalle_bloque.html
+│   ├── dashboard/               ← index.html (gráficas Chart.js)
+│   └── errores/                 ← 403.html, 404.html, 500.html
+├── dao/
+│   ├── usuario_dao.py           ← CRUD de usuarios en BD
+│   ├── dispositivo_dao.py       ← CRUD de dispositivos en BD
+│   ├── entrega_dao.py           ← CRUD de entregas + consultas analíticas
+│   ├── punto_recoleccion_dao.py ← CRUD de puntos de recolección en BD
+│   ├── recompensa_dao.py        ← CRUD de recompensas en BD
+│   └── bloque_dao.py            ← Persistencia de bloques blockchain en BD
+└── dto/
+    ├── usuario_dto.py           ← DTO para transferir datos de usuario
+    ├── dispositivo_dto.py       ← DTO para transferir datos de dispositivo
+    └── entrega_dto.py           ← DTO para transferir datos de entrega
+```
+
+---
+
+### 2. Patrón de Diseño — Factory Method
+
+**📄 Archivo:** `app/__init__.py`
+
+**¿Qué es?** El patrón Factory encapsula la creación de objetos complejos en una función o clase fábrica, permitiendo crear instancias con diferentes configuraciones sin acoplar el código al proceso de construcción.
+
+**¿Cómo se aplica?** La función `create_app()` es la fábrica que construye y configura la instancia de Flask según el entorno (`development`, `testing`, `production`). Esto permite que los tests usen una configuración diferente a producción sin cambiar el código fuente.
+
+```python
+def create_app(entorno='development'):
+    app = Flask(__name__, template_folder='views', static_folder='static')
+    app.config.from_object(configuraciones.get(entorno, configuraciones['default']))
+    db.init_app(app)
+    migrate.init_app(app, db)
+    # ...
+    return app
+```
+
+---
+
+### 3. Patrón de Diseño — Singleton
+
+**📄 Archivo:** `app/services/blockchain_service.py`
+
+La cadena de bloques debe ser **una sola** en toda la aplicación. El Singleton garantiza que `CadenaBloques.obtener_instancia()` siempre retorne la misma instancia, sin importar cuántas peticiones HTTP se procesen simultáneamente.
+
+```python
+class CadenaBloques:
+    _instancia = None
+
+    @classmethod
+    def obtener_instancia(cls):
+        if cls._instancia is None:
+            cls._instancia = cls()
+        return cls._instancia
+```
+
+---
+
+### 4. Patrón de Diseño — DAO (Data Access Object)
+
+**📄 Archivos:** `app/dao/*.py`
+
+Cada entidad tiene su propio DAO con los métodos CRUD y consultas específicas. Los controladores **nunca** escriben `db.session.query(...)` directamente.
+
+```python
+class DispositivoDAO:
+    @staticmethod
+    def crear(dto): ...
+    @staticmethod
+    def obtener_por_id(id): ...
+    @staticmethod
+    def obtener_todos(): ...
+    @staticmethod
+    def actualizar(id, dto): ...
+    @staticmethod
+    def eliminar(id): ...
+```
+
+---
+
+### 5. Patrón de Diseño — DTO (Data Transfer Object)
+
+**📄 Archivos:** `app/dto/*.py`
+
+Objetos simples que transportan datos entre capas (formulario → controlador → DAO) sin exponer los modelos ORM directamente.
+
+---
+
+### 6. Patrón de Diseño — Decorator (control de acceso por roles)
+
+**📄 Archivo:** `app/controllers/decoradores.py`
+
+```python
+@punto_recoleccion_bp.route('/nuevo', methods=['GET', 'POST'])
+@login_required
+@requiere_rol('empresa', 'gobierno')   # Solo empresa y gobierno pueden crear puntos
+def nuevo(): ...
+```
+
+---
+
+### Resumen de patrones implementados
+
+| Patrón | Archivo(s) principal(es) | Propósito en EcoSystem |
+|---|---|---|
+| **MVC** | `app/models/`, `app/controllers/`, `app/views/` | Separación de responsabilidades en toda la app |
+| **Factory Method** | `app/__init__.py` | Crear instancias de Flask con configuración por entorno |
+| **Singleton** | `app/services/blockchain_service.py` | Una única cadena de bloques compartida por toda la app |
+| **DAO** | `app/dao/*.py` | Abstracción y centralización del acceso a la base de datos |
+| **DTO** | `app/dto/*.py` | Transferencia de datos entre capas sin exponer modelos ORM |
+| **Decorator** | `app/controllers/decoradores.py` | Control de acceso por roles en las rutas HTTP |
+
+---
+
+
 
 ## 🗄️ Base de Datos
 
@@ -397,224 +617,7 @@ Cuando se registra una entrega, el flujo completo que involucra la BD es:
 
 ---
 
-## 👥 Roles de usuario
 
-| Rol | Descripción |
-|---|---|
-| Ciudadano | Registra dispositivos y hace entregas. Gana puntos. |
-| Empresa | Gestiona puntos de recolección. Hace entregas. |
-| Gobierno | Accede al dashboard estadístico. Administra el sistema. |
-
----
-
-## ⛓️ Blockchain simulado
-
-Cada entrega genera un bloque con hash SHA-256 que encadena todos los registros. Se puede explorar y verificar la integridad en `/blockchain`.
-
----
-
-## 🏆 Sistema de puntos
-
-| Dispositivo | Puntos |
-|---|---|
-| Computador | 100 |
-| Electrodoméstico | 80 |
-| Celular | 50 |
-| Tarjeta madre | 40 |
-| Batería | 30 |
-| Tablet | 30 |
-| Impresora | 20 |
-| Otro | 20 |
-
----
-
-## 🏛️ Patrones de Diseño y Estilos Arquitectónicos
-
-EcoSystem implementa múltiples patrones de diseño que se complementan para lograr un código mantenible, desacoplado y escalable.
-
----
-
-### 1. Estilo Arquitectónico — MVC (Model-View-Controller)
-
-**¿Qué es?** El estilo MVC divide la aplicación en tres capas con responsabilidades claramente separadas: los datos (Model), la presentación (View) y la lógica de control (Controller).
-
-**¿Cómo se aplica en EcoSystem?**
-
-| Capa | Carpeta | Responsabilidad |
-|---|---|---|
-| **Model** | `app/models/` | Define las entidades de la base de datos con SQLAlchemy. No contiene lógica de negocio ni HTTP. |
-| **View** | `app/views/` | Templates Jinja2 con HTML y Bootstrap 5. Solo presentación, sin lógica Python compleja. |
-| **Controller** | `app/controllers/` | Recibe peticiones HTTP, invoca DAOs/Services y retorna respuestas (`render_template` o `redirect`). |
-
-**Extensiones del MVC implementadas:**
-
-| Capa adicional | Carpeta | Rol en la arquitectura |
-|---|---|---|
-| **DAO** (Data Access Object) | `app/dao/` | Encapsula todas las queries a la base de datos. Los controladores **nunca** hacen queries directas. |
-| **DTO** (Data Transfer Object) | `app/dto/` | Objetos simples para mover datos entre capas sin acoplarlas al modelo ORM. |
-| **Services** | `app/services/` | Lógica de negocio compleja independiente de un controlador (blockchain, gamificación). |
-
-**Diagrama del flujo de una petición:**
-
-```
-[Navegador]
-    ↓  HTTP Request
-[Controller] — app/controllers/dispositivo_controller.py
-    ↓  Usa DTO para encapsular datos
-[DTO] — app/dto/dispositivo_dto.py
-    ↓  Delega operación de BD
-[DAO] — app/dao/dispositivo_dao.py
-    ↓  Opera sobre el modelo ORM
-[Model] — app/models/dispositivo.py
-    ↓  SQLAlchemy ↔ MySQL
-[Base de Datos MySQL]
-    ↑  Datos
-[Controller]
-    ↓  render_template(...)
-[View] — app/views/dispositivo/listar.html
-    ↑  HTML renderizado
-[Navegador]
-```
-
-**Archivos clave del MVC:**
-
-```
-app/
-├── models/
-│   ├── usuario.py               ← Entidad Usuario (tabla usuarios)
-│   ├── dispositivo.py           ← Entidad Dispositivo (tabla dispositivos)
-│   ├── entrega.py               ← Entidad Entrega (tabla entregas)
-│   ├── punto_recoleccion.py     ← Entidad PuntoRecoleccion (tabla puntos_recoleccion)
-│   ├── recompensa.py            ← Entidad Recompensa (tabla recompensas)
-│   └── bloque.py                ← Entidad Bloque (tabla bloques_blockchain)
-├── controllers/
-│   ├── auth_controller.py       ← Rutas: /auth/login, /auth/registro, /auth/logout
-│   ├── usuario_controller.py    ← Rutas: /usuarios/
-│   ├── dispositivo_controller.py← Rutas: /dispositivos/
-│   ├── entrega_controller.py    ← Rutas: /entregas/
-│   ├── punto_recoleccion_controller.py ← Rutas: /puntos-recoleccion/
-│   ├── recompensa_controller.py ← Rutas: /recompensas/
-│   ├── blockchain_controller.py ← Rutas: /blockchain/
-│   └── dashboard_controller.py  ← Rutas: /dashboard/ (solo gobierno)
-├── views/
-│   ├── layout/base.html         ← Template base con navbar y footer
-│   ├── auth/                    ← login.html, registro.html
-│   ├── dispositivo/             ← listar.html, formulario.html, detalle.html
-│   ├── entrega/                 ← listar.html, formulario.html, detalle.html
-│   ├── punto_recoleccion/       ← listar.html, formulario.html, detalle.html
-│   ├── recompensa/              ← listar.html, formulario.html
-│   ├── blockchain/              ← explorar.html, detalle_bloque.html
-│   ├── dashboard/               ← index.html (gráficas Chart.js)
-│   └── errores/                 ← 403.html, 404.html, 500.html
-├── dao/
-│   ├── usuario_dao.py           ← CRUD de usuarios en BD
-│   ├── dispositivo_dao.py       ← CRUD de dispositivos en BD
-│   ├── entrega_dao.py           ← CRUD de entregas + consultas analíticas
-│   ├── punto_recoleccion_dao.py ← CRUD de puntos de recolección en BD
-│   ├── recompensa_dao.py        ← CRUD de recompensas en BD
-│   └── bloque_dao.py            ← Persistencia de bloques blockchain en BD
-└── dto/
-    ├── usuario_dto.py           ← DTO para transferir datos de usuario
-    ├── dispositivo_dto.py       ← DTO para transferir datos de dispositivo
-    └── entrega_dto.py           ← DTO para transferir datos de entrega
-```
-
----
-
-### 2. Patrón de Diseño — Factory Method
-
-**📄 Archivo:** `app/__init__.py`
-
-**¿Qué es?** El patrón Factory encapsula la creación de objetos complejos en una función o clase fábrica, permitiendo crear instancias con diferentes configuraciones sin acoplar el código al proceso de construcción.
-
-**¿Cómo se aplica?** La función `create_app()` es la fábrica que construye y configura la instancia de Flask según el entorno (`development`, `testing`, `production`). Esto permite que los tests usen una configuración diferente a producción sin cambiar el código fuente.
-
-```python
-def create_app(entorno='development'):
-    app = Flask(__name__, template_folder='views', static_folder='static')
-    app.config.from_object(configuraciones.get(entorno, configuraciones['default']))
-    db.init_app(app)
-    migrate.init_app(app, db)
-    # ...
-    return app
-```
-
----
-
-### 3. Patrón de Diseño — Singleton
-
-**📄 Archivo:** `app/services/blockchain_service.py`
-
-La cadena de bloques debe ser **una sola** en toda la aplicación. El Singleton garantiza que `CadenaBloques.obtener_instancia()` siempre retorne la misma instancia, sin importar cuántas peticiones HTTP se procesen simultáneamente.
-
-```python
-class CadenaBloques:
-    _instancia = None
-
-    @classmethod
-    def obtener_instancia(cls):
-        if cls._instancia is None:
-            cls._instancia = cls()
-        return cls._instancia
-```
-
----
-
-### 4. Patrón de Diseño — DAO (Data Access Object)
-
-**📄 Archivos:** `app/dao/*.py`
-
-Cada entidad tiene su propio DAO con los métodos CRUD y consultas específicas. Los controladores **nunca** escriben `db.session.query(...)` directamente.
-
-```python
-class DispositivoDAO:
-    @staticmethod
-    def crear(dto): ...
-    @staticmethod
-    def obtener_por_id(id): ...
-    @staticmethod
-    def obtener_todos(): ...
-    @staticmethod
-    def actualizar(id, dto): ...
-    @staticmethod
-    def eliminar(id): ...
-```
-
----
-
-### 5. Patrón de Diseño — DTO (Data Transfer Object)
-
-**📄 Archivos:** `app/dto/*.py`
-
-Objetos simples que transportan datos entre capas (formulario → controlador → DAO) sin exponer los modelos ORM directamente.
-
----
-
-### 6. Patrón de Diseño — Decorator (control de acceso por roles)
-
-**📄 Archivo:** `app/controllers/decoradores.py`
-
-```python
-@punto_recoleccion_bp.route('/nuevo', methods=['GET', 'POST'])
-@login_required
-@requiere_rol('empresa', 'gobierno')   # Solo empresa y gobierno pueden crear puntos
-def nuevo(): ...
-```
-
----
-
-### Resumen de patrones implementados
-
-| Patrón | Archivo(s) principal(es) | Propósito en EcoSystem |
-|---|---|---|
-| **MVC** | `app/models/`, `app/controllers/`, `app/views/` | Separación de responsabilidades en toda la app |
-| **Factory Method** | `app/__init__.py` | Crear instancias de Flask con configuración por entorno |
-| **Singleton** | `app/services/blockchain_service.py` | Una única cadena de bloques compartida por toda la app |
-| **DAO** | `app/dao/*.py` | Abstracción y centralización del acceso a la base de datos |
-| **DTO** | `app/dto/*.py` | Transferencia de datos entre capas sin exponer modelos ORM |
-| **Decorator** | `app/controllers/decoradores.py` | Control de acceso por roles en las rutas HTTP |
-
----
 
 ## 🧩 Programación Orientada a Objetos (POO)
 
