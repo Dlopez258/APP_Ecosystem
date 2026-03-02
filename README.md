@@ -343,57 +343,41 @@ def nuevo(): ...
 
 ## 🗄️ Base de Datos
 
-### Contexto y origen del esquema
+### Motor y tecnología
 
-### Proceso de integración 
+EcoSystem usa **MySQL 8.x** como motor de base de datos, con **SQLAlchemy** como ORM a través de Flask-SQLAlchemy y **PyMySQL** como driver de conexión. Para los tests automatizados se usa **SQLite en memoria**, lo que permite ejecutar los 25 tests sin necesidad de tener MySQL instalado.
 
-
-#### Tabla `usuarios`
-| Columna | Origen | Decisión |
-|---|---|---|
-| `id`, `nombre`, `email` | Ambos | ✅ Conservado del proyecto (nombre `id` requerido por Flask-Login) |
-| `password_hash`, `puntos_acumulados`, `activo` | Proyecto original | ✅ Conservado — esenciales para autenticación y gamificación |
-| `tipo_usuario` ENUM | Proyecto original | ✅ Conservado — el compañero usaba `rol` VARCHAR con valores distintos |
-| `telefono`, `barrio` | **Aporte del compañero** | ✅ **Integrado** — enriquece el perfil del ciudadano |
-| `ciudad` | Proyecto original | ✅ Conservado (equivalente a `municipio` del compañero) |
-
-#### Tabla `dispositivos`
-| Columna | Origen | Decisión |
-|---|---|---|
-| `nombre`, `marca`, `usuario_id`, `peso_kg` | Proyecto original | ✅ Conservado |
-| `tablet`, `impresora` en ENUM categoría | **Aporte del compañero** | ✅ **Integrado** — amplía los tipos de RAEE aceptados |
-| `nuevo`, `irreparable` en ENUM estado | **Aporte del compañero** | ✅ **Integrado** — refleja mejor el ciclo de vida del dispositivo |
-
-#### Tabla `entregas`
-| Columna | Origen | Decisión |
-|---|---|---|
-| `usuario_id`, `dispositivo_id`, `punto_recoleccion_id` | Ambos | ✅ Conservado |
-| `puntos_otorgados`, `hash_blockchain` | Proyecto original | ✅ Conservado — esenciales para gamificación y blockchain |
-| `cantidad`, `observaciones` | **Aporte del compañero** | ✅ **Integrado** — permite registrar entregas de múltiples unidades |
-| `peso_kg` | **Aporte del compañero** | ✅ **Integrado** — dato real para estadísticas del dashboard |
-| `verificado`, `en_proceso`, `reutilizado` en ENUM estado | **Aporte del compañero** | ✅ **Integrado** — ciclo de vida más completo |
-
-#### Tabla `puntos_recoleccion`
-| Columna | Origen | Decisión |
-|---|---|---|
-| `nombre`, `direccion`, `ciudad`, `latitud`, `longitud`, `horario`, `tipos_aceptados`, `activo` | Proyecto original | ✅ Conservado |
-| `entidad` | **Aporte del compañero** | ✅ **Integrado** — identifica al responsable del punto (Alcaldía, ONG, empresa) |
-| `fecha_creacion` | **Aporte del compañero** | ✅ **Integrado** — trazabilidad de cuándo se registró el punto |
-
-#### Vista `resumen_usuario_entregas`
-El compañero propuso una vista SQL que calcula el resumen de actividad por usuario. Se adoptó su lógica de dos formas:
-1. **Como vista SQL** en `ecosystem_mysql.sql` para consultas directas en MySQL.
-2. **Como método ORM** `EntregaDAO.resumen_por_usuario()` para usarla desde Flask sin salir del patrón DAO.
-
-#### Tablas exclusivas del proyecto (sin equivalente en el aporte del compañero)
-| Tabla | Motivo de conservación |
-|---|---|
-| `recompensas` | Soporte al sistema de gamificación (canje de puntos) |
-| `bloques_blockchain` | Persistencia de la cadena de bloques simulada entre reinicios del servidor |
+El esquema está definido en dos lugares sincronizados:
+- **`app/models/`** — los modelos SQLAlchemy son la fuente de verdad del esquema.
+- **`instance/ecosystem_mysql.sql`** — script SQL listo para importar en MySQL, que incluye las tablas, índices, vista analítica y datos de prueba (seed).
 
 ---
 
-### Esquema final de la base de datos (MySQL 8.x)
+### Configuración por entorno
+
+La conexión a la base de datos se gestiona en `config.py` y se selecciona automáticamente según `FLASK_ENV`:
+
+```python
+class DevelopmentConfig(Config):
+    # Desarrollo local — apunta a MySQL mediante DATABASE_URL del .env
+    SQLALCHEMY_DATABASE_URI = os.getenv(
+        'DATABASE_URL',
+        'mysql+pymysql://root:password@localhost:3306/ecosystem_db'
+    )
+
+class TestingConfig(Config):
+    # Tests — SQLite en memoria, sin dependencia de MySQL
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
+    WTF_CSRF_ENABLED = False
+
+class ProductionConfig(Config):
+    # Producción — URI inyectada como variable de entorno en el servidor
+    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL')
+```
+
+---
+
+### Esquema de la base de datos (MySQL 8.x)
 
 **Motor:** InnoDB | **Charset:** utf8mb4 | **Collation:** utf8mb4_unicode_ci
 
@@ -405,10 +389,10 @@ El compañero propuso una vista SQL que calcula el resumen de actividad por usua
 | `email` | VARCHAR(150) | UNIQUE NOT NULL | Correo para login |
 | `password_hash` | VARCHAR(256) | NOT NULL | Hash Werkzeug de la contraseña |
 | `tipo_usuario` | ENUM | NOT NULL DEFAULT 'ciudadano' | `ciudadano` / `empresa` / `gobierno` |
-| `puntos_acumulados` | INT | DEFAULT 0 | Puntos de gamificación |
-| `ciudad` | VARCHAR(100) | — | Ciudad principal |
-| `telefono` | VARCHAR(20) | — | Teléfono de contacto *(aporte compañero)* |
-| `barrio` | VARCHAR(100) | — | Barrio o sector *(aporte compañero)* |
+| `puntos_acumulados` | INT | DEFAULT 0 | Puntos de gamificación acumulados |
+| `ciudad` | VARCHAR(100) | — | Ciudad principal de residencia |
+| `telefono` | VARCHAR(20) | — | Teléfono de contacto |
+| `barrio` | VARCHAR(100) | — | Barrio o sector dentro de la ciudad |
 | `fecha_registro` | DATETIME | DEFAULT CURRENT_TIMESTAMP | Fecha de registro |
 | `activo` | TINYINT(1) | DEFAULT 1 | Eliminación lógica |
 
@@ -416,7 +400,7 @@ El compañero propuso una vista SQL que calcula el resumen de actividad por usua
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
 | `id` | INT | PK AUTO_INCREMENT | Identificador único |
-| `nombre` | VARCHAR(100) | NOT NULL | Nombre descriptivo |
+| `nombre` | VARCHAR(100) | NOT NULL | Nombre descriptivo del dispositivo |
 | `categoria` | ENUM | NOT NULL | `celular` / `computador` / `bateria` / `electrodomestico` / `tarjeta_madre` / `tablet` / `impresora` / `otro` |
 | `marca` | VARCHAR(100) | — | Marca del dispositivo |
 | `estado` | ENUM | NOT NULL | `nuevo` / `funcional` / `dañado` / `obsoleto` / `irreparable` |
@@ -429,31 +413,31 @@ El compañero propuso una vista SQL que calcula el resumen de actividad por usua
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
 | `id` | INT | PK AUTO_INCREMENT | Identificador único |
-| `nombre` | VARCHAR(150) | NOT NULL | Nombre del punto |
+| `nombre` | VARCHAR(150) | NOT NULL | Nombre del punto de recolección |
 | `direccion` | VARCHAR(255) | NOT NULL | Dirección física |
-| `ciudad` | VARCHAR(100) | NOT NULL | Ciudad (indexada) |
+| `ciudad` | VARCHAR(100) | NOT NULL | Ciudad donde está ubicado (indexada) |
 | `latitud` | DECIMAL(10,8) | — | Coordenada geográfica |
 | `longitud` | DECIMAL(11,8) | — | Coordenada geográfica |
 | `horario` | VARCHAR(200) | — | Horario de atención |
-| `tipos_aceptados` | VARCHAR(255) | — | Categorías separadas por coma |
-| `entidad` | VARCHAR(120) | — | Responsable: Alcaldía, ONG, empresa *(aporte compañero)* |
-| `fecha_creacion` | DATETIME | DEFAULT CURRENT_TIMESTAMP | Fecha de registro *(aporte compañero)* |
+| `tipos_aceptados` | VARCHAR(255) | — | Categorías de RAEE aceptadas, separadas por coma |
+| `entidad` | VARCHAR(120) | — | Entidad responsable: Alcaldía, ONG, empresa privada, etc. |
+| `fecha_creacion` | DATETIME | DEFAULT CURRENT_TIMESTAMP | Fecha de registro del punto |
 | `activo` | TINYINT(1) | DEFAULT 1 | Eliminación lógica |
 
 #### Tabla `entregas`
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
 | `id` | INT | PK AUTO_INCREMENT | Identificador único |
-| `usuario_id` | INT | FK → usuarios(id) CASCADE | Usuario que entrega |
+| `usuario_id` | INT | FK → usuarios(id) CASCADE | Usuario que realiza la entrega |
 | `dispositivo_id` | INT | FK → dispositivos(id) RESTRICT | Dispositivo entregado |
 | `punto_recoleccion_id` | INT | FK → puntos_recoleccion(id) RESTRICT | Punto receptor |
-| `fecha_entrega` | DATETIME | DEFAULT CURRENT_TIMESTAMP | Fecha de la entrega |
+| `fecha_entrega` | DATETIME | DEFAULT CURRENT_TIMESTAMP | Fecha y hora de la entrega |
 | `estado` | ENUM | DEFAULT 'pendiente' | `pendiente` / `recibido` / `verificado` / `en_proceso` / `procesado` / `reutilizado` / `reciclado` |
-| `puntos_otorgados` | INT | DEFAULT 0 | Puntos dados al usuario |
-| `hash_blockchain` | VARCHAR(256) | — | Hash SHA-256 del bloque asociado |
-| `cantidad` | SMALLINT | DEFAULT 1 | Unidades entregadas *(aporte compañero)* |
-| `peso_kg` | DECIMAL(6,2) | — | Peso total en kg *(aporte compañero)* |
-| `observaciones` | TEXT | — | Notas adicionales *(aporte compañero)* |
+| `puntos_otorgados` | INT | DEFAULT 0 | Puntos de gamificación asignados |
+| `hash_blockchain` | VARCHAR(256) | — | Hash SHA-256 del bloque blockchain asociado |
+| `cantidad` | SMALLINT | DEFAULT 1 | Número de unidades entregadas |
+| `peso_kg` | DECIMAL(6,2) | — | Peso total en kg de los dispositivos entregados |
+| `observaciones` | TEXT | — | Notas adicionales sobre la entrega |
 
 #### Tabla `recompensas`
 | Columna | Tipo | Restricciones | Descripción |
@@ -469,22 +453,22 @@ El compañero propuso una vista SQL que calcula el resumen de actividad por usua
 | Columna | Tipo | Restricciones | Descripción |
 |---|---|---|---|
 | `id` | INT | PK AUTO_INCREMENT | Identificador único |
-| `indice` | INT | NOT NULL | Posición en la cadena (0 = génesis) |
-| `timestamp` | DATETIME | NOT NULL | Fecha de creación del bloque |
-| `datos` | TEXT | NOT NULL | JSON con los datos de la entrega |
+| `indice` | INT | NOT NULL | Posición del bloque en la cadena (0 = génesis) |
+| `timestamp` | DATETIME | NOT NULL | Fecha y hora de creación del bloque |
+| `datos` | TEXT | NOT NULL | JSON con los datos de la entrega trazada |
 | `hash_previo` | VARCHAR(256) | NOT NULL | Hash SHA-256 del bloque anterior |
 | `hash_actual` | VARCHAR(256) | NOT NULL | Hash SHA-256 de este bloque |
 | `nonce` | INT | DEFAULT 0 | Número de prueba de trabajo |
 
 #### Vista `resumen_usuario_entregas`
-Vista SQL que agrega la actividad de cada usuario activo. Equivalente al método `EntregaDAO.resumen_por_usuario()`.
+Vista SQL que consolida la actividad de cada usuario activo. También implementada como `EntregaDAO.resumen_por_usuario()` para consumirla desde el patrón DAO sin salir del ORM.
 
 | Campo | Descripción |
 |---|---|
 | `id_usuario` | ID del usuario |
 | `nombre` | Nombre completo |
 | `ciudad` | Ciudad del usuario |
-| `puntos_acumulados` | Puntos totales acumulados |
+| `puntos_acumulados` | Total de puntos acumulados |
 | `total_entregas` | Número de entregas realizadas |
 | `total_dispositivos` | Suma de unidades entregadas |
 | `total_kg` | Peso total en kg entregado |
@@ -504,7 +488,7 @@ dispositivos ──── 1 ──── entregas ──── N ──── pu
                               ↓
                      bloques_blockchain
 
-recompensas (tabla independiente — se consulta según puntos del usuario)
+recompensas  (tabla independiente — se consulta según puntos del usuario)
 ```
 
 - Un **usuario** puede registrar muchos **dispositivos** (1:N).
@@ -520,38 +504,22 @@ recompensas (tabla independiente — se consulta según puntos del usuario)
 
 | Índice | Tabla | Columna | Propósito |
 |---|---|---|---|
-| `idx_puntos_ciudad` | `puntos_recoleccion` | `ciudad` | Búsquedas rápidas por ciudad *(aporte compañero)* |
-| `idx_entregas_usuario` | `entregas` | `usuario_id` | Historial de entregas por usuario *(aporte compañero)* |
-| `idx_entregas_punto` | `entregas` | `punto_recoleccion_id` | Actividad por punto *(aporte compañero)* |
-| `idx_entregas_fecha` | `entregas` | `fecha_entrega` | Consultas de tendencia temporal *(aporte compañero)* |
+| `idx_puntos_ciudad` | `puntos_recoleccion` | `ciudad` | Búsquedas rápidas de puntos por ciudad |
+| `idx_entregas_usuario` | `entregas` | `usuario_id` | Historial de entregas por usuario |
+| `idx_entregas_punto` | `entregas` | `punto_recoleccion_id` | Actividad por punto de recolección |
+| `idx_entregas_fecha` | `entregas` | `fecha_entrega` | Consultas de tendencia temporal |
 | `idx_blockchain_indice` | `bloques_blockchain` | `indice` | Reconstrucción ordenada de la cadena |
-| `idx_blockchain_hash` | `bloques_blockchain` | `hash_actual` | Búsqueda de bloque por hash |
+| `idx_blockchain_hash` | `bloques_blockchain` | `hash_actual` | Búsqueda de un bloque por su hash |
 
 ---
 
 ### Cómo funciona la BD dentro del proyecto
 
-#### 1. Inicialización (ORM → MySQL)
-Los modelos SQLAlchemy en `app/models/` son la **fuente de verdad** del esquema. El archivo `ecosystem_mysql.sql` es una representación SQL de esos modelos, lista para importar directamente en MySQL sin necesidad de correr migraciones.
+#### 1. Inicialización
+El archivo `instance/ecosystem_mysql.sql` crea la base de datos completa en un solo comando. Los modelos SQLAlchemy en `app/models/` están sincronizados con ese esquema y son la referencia para cualquier cambio futuro.
 
-#### 2. Configuración por entorno (`config.py`)
-```python
-class DevelopmentConfig(Config):
-    SQLALCHEMY_DATABASE_URI = os.getenv(
-        'DATABASE_URL',
-        'mysql+pymysql://root:password@localhost:3306/ecosystem_db'
-    )
-
-class TestingConfig(Config):
-    # Tests usan SQLite en memoria — no requieren MySQL
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
-
-class ProductionConfig(Config):
-    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL')  # Variable del servidor
-```
-
-#### 3. Flujo de una operación de BD (patrón DAO)
-Ningún controlador hace consultas directas. Todo pasa por la capa DAO:
+#### 2. Flujo de una operación de BD (patrón DAO)
+Ningún controlador hace consultas directas a la base de datos. Todo pasa por la capa DAO:
 
 ```
 [Formulario WTForms]  →  POST HTTP
@@ -567,18 +535,18 @@ Ningún controlador hace consultas directas. Todo pasa por la capa DAO:
 [MySQL 8.x]  →  persiste el dato en la tabla correspondiente
 ```
 
-#### 4. Persistencia de la blockchain
+#### 3. Persistencia de la blockchain
 La `CadenaBloques` (Singleton en memoria) se reconstruye desde la tabla `bloques_blockchain` cada vez que el servidor se reinicia:
 
 ```python
-# blockchain_controller.py
 cadena = CadenaBloques.obtener_instancia()
 if len(cadena.cadena) <= 1 and bloques_bd:
     cadena.sincronizar_desde_bd(bloques_bd)  # Reconstruye desde MySQL
 ```
 
-#### 5. Gamificación y puntos
-Cuando se registra una entrega, el flujo completo que involucra la BD es:
+#### 4. Flujo completo de una entrega (operaciones en BD)
+
+Cuando un usuario registra una entrega, se ejecutan 6 operaciones encadenadas sobre la base de datos:
 
 ```
 1. EntregaDAO.crear(dto)                           → INSERT en entregas
@@ -590,7 +558,6 @@ Cuando se registra una entrega, el flujo completo que involucra la BD es:
 ```
 
 ---
-
 
 
 ## 🧩 Programación Orientada a Objetos (POO)
