@@ -178,17 +178,6 @@ class EntregaDAO:
 
     @staticmethod
     def resumen_por_usuario():
-        """
-        Retorna el resumen de actividad por usuario: total de entregas,
-        dispositivos, peso y última entrega.
-        Implementa la lógica de la vista 'resumen_usuario_entregas'
-        aportada por el compañero de equipo.
-
-        Returns:
-            list[tuple]: Cada fila contiene
-                (id, nombre, ciudad, puntos_acumulados,
-                 total_entregas, total_dispositivos, total_kg, ultima_entrega)
-        """
         from app.models.usuario import Usuario
         from sqlalchemy import func
         return db.session.query(
