@@ -100,7 +100,7 @@ pytest tests/ -v
 ## 📁 Estructura del proyecto
 
 ```
-Eje2_ArquitecturaSoftware/
+APP_Ecosystem/
 ├── app/
 │   ├── __init__.py          # Factory de la app (create_app)
 │   ├── models/              # Modelos SQLAlchemy
